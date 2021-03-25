@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<!DOCTYPE jml SYSTEM "file://jml.dtd">
+<jml version="1.2">
+<pattern>
+<title>[4 2]244122[1 2][2 2]2[2 2]2</title>
+<prop type="ball" mod="color=red"/>
+<prop type="ball" mod="color=green;note=mi"/>
+<prop type="ball" mod="color=blue;note=sol"/>
+<setup jugglers="1" paths="3" props="1,2,3"/>
+<symmetry type="delay" pperm="(1)(2)(3)" delay="2.4"/>
+<event x="10" y="0" z="0" t="0.1" hand="1:right">
+<throw path="1" type="toss"/><holding path="2"/></event>
+<event x="-20" y="0" z="0" t="0.2" hand="1:left"><holding path="3"/></event>
+<event x="10" y="0" z="0" t="0.4" hand="1:right"><holding path="2"/></event>
+<event x="10" y="0" z="0" t="0.5" hand="1:right"><throw path="2" type="toss"/></event>
+<event x="-10" y="0" z="0" t="0.5" hand="1:left"><holding path="3"/></event>
+<event x="-10" y="0" z="0" t="0.7" hand="1:left"><throw path="3" type="toss"/></event>
+<event x="40" y="0" z="0" t="0.8" hand="1:right"><catch path="1"/></event>
+<event x="30" y="0" z="0" t="0.9" hand="1:right"><throw path="1" type="toss"/></event>
+<event x="-30" y="0" z="0" t="1" hand="1:left"><catch path="1"/></event>
+<event x="-30" y="0" z="0" t="1.1" hand="1:left"><holding path="1"/></event>
+<event x="40" y="0" z="0" t="1.2" hand="1:right"><catch path="2"/></event>
+<event x="30" y="0" z="0" t="1.3" hand="1:right"><holding path="2"/></event>
+<event x="-40" y="0" z="0" t="1.4" hand="1:left"><catch path="3"/><holding path="1"/></event>
+<event x="-30" y="0" z="0" t="1.5" hand="1:left"><throw path="3" type="toss"/><holding path="1"/></event>
+<event x="20" y="0" z="0" t="1.6" hand="1:right"><catch path="3"/><holding path="2"/></event>
+<event x="20" y="0" z="0" t="1.7" hand="1:right"><holding path="3"/><holding path="2"/></event>
+<event x="-10" y="0" z="0" t="1.8" hand="1:left"><holding path="1"/></event>
+<event x="-20" y="0" z="0" t="1.9" hand="1:left"><holding path="1"/></event>
+<event x="20" y="0" z="0" t="2.0" hand="1:right"><throw path="3" type="toss"/><holding path="2"/></event>
+<event x="-20" y="0" z="0" t="2.1" hand="1:left"><holding path="1"/><catch path="3"/></event>
+<event x="-20" y="0" z="0" t="2.2" hand="1:left"><throw path="1" type="toss"/><holding path="3"/></event>
+<event x="20" y="0" z="0" t="2.3" hand="1:right"><softcatch path="1"/><holding path="2"/></event></pattern></jml>
