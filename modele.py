@@ -38,6 +38,14 @@ Throw=collections.namedtuple('Throw',
                              ['source_hand', 'target_hand', 'duration'])
 
 class Model:
+
+    balls : tuple[recordclass, ...]
+    states : list[State]
+    number_of_hands : int
+    time_in_hand : float
+    pattern : list[int]
+
+
     """
     # Hypotheses
     # - the number of hands does not change
@@ -48,43 +56,45 @@ class Model:
     # - hands: a tuple of list of ball numbers:
     #   for each hand, the numbers of the balls it holds
     """
-    def __init__(self, *hand_content, pattern=[3]):
-        balls = []
+    def __init__(self, *hand_content : list[dict], pattern : list[int] =[3]):
+        balls : list[recordclass] = []
         hands = []
+        i : int
+        content : list[dict]
         for i,content in enumerate(hand_content):
-            hand = []
+            hand : list[recordclass] = []
             for color in content:
                 if isinstance(color, dict):
                     tone = simpleaudio.WaveObject.from_wave_file(color["tone"]+".wav")
                     color = color["color"]
                 else:
                     tone = None
-                ball = Ball(color=color,
-                            tone=tone,
-                            target_hand=i,
-                            time_to_land=0,
-                            number=len(balls))
+                ball : recordclass = Ball(color=color,
+                                          tone=tone,
+                                          target_hand=i,
+                                          time_to_land=0,
+                                          number=len(balls))
                 balls.append(ball)
                 hand.append(ball.number)
             hands.append(hand)
-        balls = tuple(balls)
-        hands = tuple(hands)
-        self.balls = tuple(balls)
-        self.states = [State(balls=balls, hands=hands)]
-        self.number_of_hands = len(hands)
+        ballst : tuple[recordclass, ...] = tuple(balls)
+        handst = tuple(hands)
+        self.balls = ballst
+        self.states = [State(balls=ballst, hands=handst)]
+        self.number_of_hands = len(handst)
         self.time_in_hand = .9
         self.pattern=pattern
 
-    def throw(self, t):
+    def throw(self, t : int):
         duration = self.pattern[t % len(self.pattern)]
         return Throw(source_hand = t % self.number_of_hands,
                      target_hand = (t + duration) % self.number_of_hands,
                      duration = duration)
 
-    def transition(self, state, throw):
+    def transition(self, state : recordclass, throw : Throw):
         hands = copy.deepcopy(state.hands)
         balls = copy.deepcopy(state.balls)
-        thrown_balls = []
+        thrown_balls : list[recordclass] = []
         for b in balls:
             if b.time_to_land > 1:   # flying ball
                 b.time_to_land -= 1;
@@ -106,7 +116,7 @@ class Model:
                 print("main vide!")
         return State(balls=balls, hands=hands)
 
-    def state(self, t):
+    def state(self, t : int):
         for t1 in range(len(self.states)-1, t):
             self.states.append(self.transition(self.states[-1], self.throw(t1)))
         return self.states[t]
