@@ -15,22 +15,34 @@ information
 import copy
 import simpleaudio
 import collections
-from recordclass import recordclass
+from recordclass import recordclass, RecordClass
 from pythreejs import Mesh, SphereBufferGeometry, SphereGeometry, OrbitControls, MeshLambertMaterial, MeshStandardMaterial, PerspectiveCamera, Scene, Renderer, AmbientLight
 from numpy import pi, cos, sin
+from typing import Optional
 
-Ball=recordclass('Ball',
-                 ['color',
-                  'tone',
-                  'source_hand', 'target_hand',
-                  'time_flying', 'time_to_land',
-                  'number'
-                 ],
-                 defaults=
-                 ['white', None,
-                  None, None,
-                0, 0,
-                  None])
+# Ball=recordclass('Ball',
+#                  ['color',
+#                   'tone',
+#                   'source_hand', 'target_hand',
+#                   'time_flying', 'time_to_land',
+#                   'number'
+#                  ],
+#                  defaults=
+#                  ['white', None,
+#                   None, None,
+#                 0, 0,
+#                   None])
+
+# utilisation de RecordClass ainsi au lieu de recordclass
+# pour pouvoir utiliser le type Ball dans le typage avec mypy
+class Ball(RecordClass):
+    color : str = 'white'
+    tone : Optional[str] = None
+    source_hand : Optional[int] = None
+    target_hand : Optional[int] = None
+    time_flying : int = 0
+    time_to_land : int = 0
+    number : Optional[int] = None
 
 State=collections.namedtuple('State',
                              ['hands', 'balls'])
@@ -39,7 +51,7 @@ Throw=collections.namedtuple('Throw',
 
 class Model:
 
-    balls : tuple[recordclass, ...]
+    balls : tuple[Ball, ...]
     states : list[State]
     number_of_hands : int
     time_in_hand : float
@@ -57,27 +69,27 @@ class Model:
     #   for each hand, the numbers of the balls it holds
     """
     def __init__(self, *hand_content : list[dict], pattern : list[int] =[3]):
-        balls : list[recordclass] = []
+        balls : list[Ball] = []
         hands = []
         i : int
         content : list[dict]
         for i,content in enumerate(hand_content):
-            hand : list[recordclass] = []
+            hand : list[Optional[int]] = []
             for color in content:
                 if isinstance(color, dict):
                     tone = simpleaudio.WaveObject.from_wave_file(color["tone"]+".wav")
                     color = color["color"]
                 else:
                     tone = None
-                ball : recordclass = Ball(color=color,
-                                          tone=tone,
-                                          target_hand=i,
-                                          time_to_land=0,
-                                          number=len(balls))
+                ball : Ball = Ball(color=color,
+                                   tone=tone,
+                                   target_hand=i,
+                                   time_to_land=0,
+                                   number=len(balls))
                 balls.append(ball)
                 hand.append(ball.number)
             hands.append(hand)
-        ballst : tuple[recordclass, ...] = tuple(balls)
+        ballst : tuple[Ball, ...] = tuple(balls)
         handst = tuple(hands)
         self.balls = ballst
         self.states = [State(balls=ballst, hands=handst)]
