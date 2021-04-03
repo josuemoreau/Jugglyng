@@ -15,23 +15,11 @@ information
 import copy
 import simpleaudio
 import collections
+import time
 from recordclass import recordclass, RecordClass
 from pythreejs import Mesh, SphereBufferGeometry, SphereGeometry, OrbitControls, MeshLambertMaterial, MeshStandardMaterial, PerspectiveCamera, Scene, Renderer, AmbientLight
 from numpy import pi, cos, sin
 from typing import Optional
-
-# Ball=recordclass('Ball',
-#                  ['color',
-#                   'tone',
-#                   'source_hand', 'target_hand',
-#                   'time_flying', 'time_to_land',
-#                   'number'
-#                  ],
-#                  defaults=
-#                  ['white', None,
-#                   None, None,
-#                 0, 0,
-#                   None])
 
 # utilisation de RecordClass ainsi au lieu de recordclass
 # pour pouvoir utiliser le type Ball dans le typage avec mypy
@@ -43,6 +31,7 @@ class Ball(RecordClass):
     time_flying : int = 0
     time_to_land : int = 0
     number : Optional[int] = None
+    last_time_played : float = True
 
 State=collections.namedtuple('State',
                              ['hands', 'balls'])
@@ -85,7 +74,8 @@ class Model:
                                    tone=tone,
                                    target_hand=i,
                                    time_to_land=0,
-                                   number=len(balls))
+                                   number=len(balls),
+                                   last_time_played=0.)
                 balls.append(ball)
                 hand.append(ball.number)
             hands.append(hand)
@@ -94,7 +84,7 @@ class Model:
         self.balls = ballst
         self.states = [State(balls=ballst, hands=handst)]
         self.number_of_hands = len(handst)
-        self.time_in_hand = .9
+        self.time_in_hand = 0.9
         self.pattern=pattern
 
     def throw(self, t : int):
@@ -194,8 +184,10 @@ class View:
             #    self.balls[i].mesh.position = x,z,y
             #    y = y + 10
         for ball in state.balls:
-            if ball.tone is not None and ball.time_to_land > 0 and ball.time_to_land < .1:
-                ball.tone.play()
+            if ball.tone is not None and ball.time_to_land > 0 and ball.time_to_land < .5:
+                if time.time() * 1000 - ball.last_time_played > 1000.0:
+                    ball.tone.play()
+                    ball.last_time_played = time.time() * 1000
             if ball.time_to_land > t - step:
                 x0,z0,y0 = self.hand_position(self.hands[ball.source_hand], step - ball.time_flying)
                 x1,z1,y1 = self.hand_position(self.hands[ball.target_hand], step + ball.time_to_land)
