@@ -23,15 +23,28 @@ from typing import Optional
 
 # utilisation de RecordClass ainsi au lieu de recordclass
 # pour pouvoir utiliser le type Ball dans le typage avec mypy
-class Ball(RecordClass):
-    color : str = 'white'
-    tone : Optional[str] = None
-    source_hand : Optional[int] = None
-    target_hand : Optional[int] = None
-    time_flying : int = 0
-    time_to_land : int = 0
-    number : Optional[int] = None
-    last_time_played : float = True
+# class Ball(RecordClass):
+#     color : str = 'white'
+#     tone : Optional[str] = None
+#     source_hand : Optional[int] = None
+#     target_hand : Optional[int] = None
+#     time_flying : int = 0
+#     time_to_land : int = 0
+#     number : Optional[int] = None
+#     last_time_played : float = 0.
+
+Ball=recordclass('Ball',
+                 ['color',
+                  'tone',
+                  'source_hand', 'target_hand',
+                  'time_flying', 'time_to_land',
+                  'number', 'last_time_played'
+                 ],
+                 defaults=
+                 ['white', None,
+                  None, None,
+                0, 0,
+                  None, 0.])
 
 State=collections.namedtuple('State',
                              ['hands', 'balls'])
@@ -40,11 +53,11 @@ Throw=collections.namedtuple('Throw',
 
 class Model:
 
-    balls : tuple[Ball, ...]
-    states : list[State]
-    number_of_hands : int
-    time_in_hand : float
-    pattern : list[int]
+    # balls : tuple[Ball, ...]
+    # states : list[State]
+    # number_of_hands : int
+    # time_in_hand : float
+    # pattern : list[int]
 
 
     """
@@ -57,29 +70,34 @@ class Model:
     # - hands: a tuple of list of ball numbers:
     #   for each hand, the numbers of the balls it holds
     """
-    def __init__(self, *hand_content : list[dict], pattern : list[int] =[3]):
-        balls : list[Ball] = []
+    # def __init__(self, *hand_content : list[dict], pattern : list[int] =[3]):
+    def __init__(self, *hand_content, pattern =[3]):
+        # balls : list[Ball] = []
+        balls = []
         hands = []
-        i : int
-        content : list[dict]
+        # i : int
+        # content : list[dict]
         for i,content in enumerate(hand_content):
-            hand : list[Optional[int]] = []
+            # hand : list[Optional[int]] = []
+            hand = []
             for color in content:
                 if isinstance(color, dict):
                     tone = simpleaudio.WaveObject.from_wave_file(color["tone"]+".wav")
                     color = color["color"]
                 else:
                     tone = None
-                ball : Ball = Ball(color=color,
-                                   tone=tone,
-                                   target_hand=i,
-                                   time_to_land=0,
-                                   number=len(balls),
-                                   last_time_played=0.)
+                # ball : Ball = Ball(color=color,)
+                ball = Ball(color=color,
+                            tone=tone,
+                            target_hand=i,
+                            time_to_land=0,
+                            number=len(balls),
+                            last_time_played=0.)
                 balls.append(ball)
                 hand.append(ball.number)
             hands.append(hand)
-        ballst : tuple[Ball, ...] = tuple(balls)
+        # ballst : tuple[Ball, ...] = tuple(balls)
+        ballst = tuple(balls)
         handst = tuple(hands)
         self.balls = ballst
         self.states = [State(balls=ballst, hands=handst)]
@@ -93,10 +111,12 @@ class Model:
                      target_hand = (t + duration) % self.number_of_hands,
                      duration = duration)
 
-    def transition(self, state : recordclass, throw : Throw):
+    # def transition(self, state : recordclass, throw : Throw):
+    def transition(self, state, throw):
         hands = copy.deepcopy(state.hands)
         balls = copy.deepcopy(state.balls)
-        thrown_balls : list[recordclass] = []
+        # thrown_balls : list[recordclass] = []
+        thrown_balls = []
         for b in balls:
             if b.time_to_land > 1:   # flying ball
                 b.time_to_land -= 1;
