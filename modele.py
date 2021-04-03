@@ -129,6 +129,7 @@ class BallView:
             SphereBufferGeometry(5, 32, 16),
             MeshStandardMaterial(color=color)
         )
+        self.played_sound = False
 
 class HandView:
     def __init__(self, x=0, y=0, z=-30, r=10, side=1, phase=0):
@@ -185,9 +186,11 @@ class View:
             #    y = y + 10
         for ball in state.balls:
             if ball.tone is not None and ball.time_to_land > 0 and ball.time_to_land < .5:
-                if time.time() * 1000 - ball.last_time_played > 1000.0:
+                if not self.balls[ball.number].played_sound:
                     ball.tone.play()
-                    ball.last_time_played = time.time() * 1000
+                    self.balls[ball.number].played_sound = True
+            else:
+                self.balls[ball.number].played_sound = False
             if ball.time_to_land > t - step:
                 x0,z0,y0 = self.hand_position(self.hands[ball.source_hand], step - ball.time_flying)
                 x1,z1,y1 = self.hand_position(self.hands[ball.target_hand], step + ball.time_to_land)
