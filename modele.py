@@ -16,6 +16,7 @@ import copy
 import simpleaudio
 import collections
 import time
+import pygame as pg
 from recordclass import recordclass, RecordClass
 from pythreejs import Mesh, SphereBufferGeometry, SphereGeometry, OrbitControls, MeshLambertMaterial, MeshStandardMaterial, PerspectiveCamera, Scene, Renderer, AmbientLight
 from numpy import pi, cos, sin
@@ -46,10 +47,24 @@ Ball=recordclass('Ball',
                 0, 0,
                   None, 0.])
 
+def copy_ball(ball):
+    b = Ball(color=ball.color,
+             tone=ball.tone,
+             source_hand=ball.source_hand,
+             target_hand=ball.target_hand,
+             time_flying=ball.time_flying,
+             time_to_land=ball.time_to_land,
+             number=ball.number,
+             last_time_played=ball.last_time_played)
+
+    return b
+
 State=collections.namedtuple('State',
                              ['hands', 'balls'])
 Throw=collections.namedtuple('Throw',
                              ['source_hand', 'target_hand', 'duration'])
+
+pg.mixer.init()
 
 class Model:
 
@@ -75,6 +90,7 @@ class Model:
         # balls : list[Ball] = []
         balls = []
         hands = []
+
         # i : int
         # content : list[dict]
         for i,content in enumerate(hand_content):
@@ -82,7 +98,8 @@ class Model:
             hand = []
             for color in content:
                 if isinstance(color, dict):
-                    tone = simpleaudio.WaveObject.from_wave_file(color["tone"]+".wav")
+                    # tone = simpleaudio.WaveObject.from_wave_file(color["tone"]+".wav")
+                    tone = pg.mixer.Sound(color["tone"] + ".wav")
                     color = color["color"]
                 else:
                     tone = None
@@ -113,8 +130,10 @@ class Model:
 
     # def transition(self, state : recordclass, throw : Throw):
     def transition(self, state, throw):
+        # hands = copy.deepcopy(state.hands)
+        # balls = copy.deepcopy(state.balls)
         hands = copy.deepcopy(state.hands)
-        balls = copy.deepcopy(state.balls)
+        balls = tuple([copy_ball(x) for x in state.balls])
         # thrown_balls : list[recordclass] = []
         thrown_balls = []
         for b in balls:
