@@ -20,32 +20,19 @@ import pygame as pg
 from recordclass import recordclass, RecordClass
 from pythreejs import Mesh, SphereBufferGeometry, SphereGeometry, OrbitControls, MeshLambertMaterial, MeshStandardMaterial, PerspectiveCamera, Scene, Renderer, AmbientLight
 from numpy import pi, cos, sin
-from typing import Optional
+from typing import Optional, List, Dict, Tuple, Union
 
 # utilisation de RecordClass ainsi au lieu de recordclass
 # pour pouvoir utiliser le type Ball dans le typage avec mypy
-# class Ball(RecordClass):
-#     color : str = 'white'
-#     tone : Optional[str] = None
-#     source_hand : Optional[int] = None
-#     target_hand : Optional[int] = None
-#     time_flying : int = 0
-#     time_to_land : int = 0
-#     number : Optional[int] = None
-#     last_time_played : float = 0.
-
-Ball=recordclass('Ball',
-                 ['color',
-                  'tone',
-                  'source_hand', 'target_hand',
-                  'time_flying', 'time_to_land',
-                  'number', 'last_time_played'
-                 ],
-                 defaults=
-                 ['white', None,
-                  None, None,
-                0, 0,
-                  None, 0.])
+class Ball(RecordClass):
+    color : str = 'white'
+    tone = None
+    source_hand : Optional[int] = None
+    target_hand : Optional[int] = None
+    time_flying : int = 0
+    time_to_land : int = 0
+    number : int = 0
+    last_time_played : float = 0.
 
 def copy_ball(ball):
     b = Ball(color=ball.color,
@@ -68,11 +55,11 @@ pg.mixer.init()
 
 class Model:
 
-    # balls : tuple[Ball, ...]
-    # states : list[State]
-    # number_of_hands : int
-    # time_in_hand : float
-    # pattern : list[int]
+    balls : Tuple[Ball, ...]
+    states : List[State]
+    number_of_hands : int
+    time_in_hand : float
+    pattern : List[int]
 
 
     """
@@ -85,37 +72,31 @@ class Model:
     # - hands: a tuple of list of ball numbers:
     #   for each hand, the numbers of the balls it holds
     """
-    # def __init__(self, *hand_content : list[dict], pattern : list[int] =[3]):
-    def __init__(self, *hand_content, pattern =[3]):
-        # balls : list[Ball] = []
-        balls = []
-        hands = []
+    def __init__(self, *hand_content : List[dict], pattern : List[int] = [3]):
+        balls : List[Ball] = []
+        hands : List[List[Optional[int]]] = []
 
-        # i : int
-        # content : list[dict]
+        i : int
+        content : List[dict]
         for i,content in enumerate(hand_content):
-            # hand : list[Optional[int]] = []
-            hand = []
+            hand : List[Optional[int]] = []
             for color in content:
                 if isinstance(color, dict):
-                    # tone = simpleaudio.WaveObject.from_wave_file(color["tone"]+".wav")
                     tone = pg.mixer.Sound(color["tone"] + ".wav")
                     color = color["color"]
                 else:
                     tone = None
-                # ball : Ball = Ball(color=color,)
-                ball = Ball(color=color,
-                            tone=tone,
-                            target_hand=i,
-                            time_to_land=0,
-                            number=len(balls),
-                            last_time_played=0.)
+                ball : Ball = Ball(color=color,
+                                   tone=tone,
+                                   target_hand=i,
+                                   time_to_land=0,
+                                   number=len(balls),
+                                   last_time_played=0.)
                 balls.append(ball)
                 hand.append(ball.number)
             hands.append(hand)
-        # ballst : tuple[Ball, ...] = tuple(balls)
-        ballst = tuple(balls)
-        handst = tuple(hands)
+        ballst : Tuple[Ball, ...]                = tuple(balls)
+        handst : Tuple[List[Optional[int]], ...] = tuple(hands)
         self.balls = ballst
         self.states = [State(balls=ballst, hands=handst)]
         self.number_of_hands = len(handst)
@@ -128,14 +109,10 @@ class Model:
                      target_hand = (t + duration) % self.number_of_hands,
                      duration = duration)
 
-    # def transition(self, state : recordclass, throw : Throw):
-    def transition(self, state, throw):
-        # hands = copy.deepcopy(state.hands)
-        # balls = copy.deepcopy(state.balls)
+    def transition(self, state : State, throw : Throw):
         hands = copy.deepcopy(state.hands)
         balls = tuple([copy_ball(x) for x in state.balls])
-        # thrown_balls : list[recordclass] = []
-        thrown_balls = []
+        thrown_balls : List[Ball] = []
         for b in balls:
             if b.time_to_land > 1:   # flying ball
                 b.time_to_land -= 1;
@@ -163,7 +140,7 @@ class Model:
         return self.states[t]
 
 class BallView:
-    def __init__(self, color):
+    def __init__(self, color : str):
         self.mesh = Mesh(
             SphereBufferGeometry(5, 32, 16),
             MeshStandardMaterial(color=color)
@@ -171,13 +148,14 @@ class BallView:
         self.played_sound = False
 
 class HandView:
-    def __init__(self, x=0, y=0, z=-30, r=10, side=1, phase=0):
-        self.x=x
-        self.y=y
-        self.z=z
-        self.r=r
-        self.side = side
-        self.phase = phase
+    def __init__(self, x : int =  0, y    : int = 0, z     : int = -30, 
+                       r : int = 10, side : int = 1, phase : int =   0):
+        self.x : int = x
+        self.y : int = y
+        self.z : int = z
+        self.r : int = r
+        self.side  : int = side
+        self.phase : int = phase
         self.mesh =  Mesh(
             SphereBufferGeometry(4, 32, 16),
             MeshStandardMaterial(color="white")
@@ -185,20 +163,21 @@ class HandView:
 
 class View:
     height_constant = 7
-    def __init__(self, model):
-        self.model = model
+    def __init__(self, model : Model):
+        self.model : Model = model
         initial_state = self.model.state(0)
-        self.balls = [BallView(ball.color)
-                      for ball in initial_state.balls]
+        self.balls : List[BallView] = [BallView(ball.color)
+                                       for ball in initial_state.balls]
         # TODO: currently hardcoded for two hands
-        self.hands = [HandView(x=-25, side=-1),
-                      HandView(x= 25, side=1, phase=1)]
+        self.hands : List[HandView] = [HandView(x=-25, side=-1),
+                                       HandView(x= 25, side=1, phase=1)]
 
         width=500
         height=500
         camera = PerspectiveCamera(position=[0, 0, -100], up = [0,1,0], aspect=width/height)
-        objects = [object.mesh for object in self.hands + self.balls]
-        scene  = Scene(children= objects + [camera, AmbientLight()])
+
+        objects = [object.mesh for object in self.hands] + [object.mesh for object in self.balls]
+        scene   = Scene(children= objects + [camera, AmbientLight()])
         self.widget = Renderer(scene=scene,
                                camera=camera,
                                alpha=True,
@@ -209,12 +188,12 @@ class View:
         )
         self.update(0)
 
-    def hand_position(self, hand, t):
+    def hand_position(self, hand : HandView, t : float):
         alpha = pi * (t + hand.phase)
         return hand.x+hand.side*hand.r*cos(alpha), hand.z-hand.r*sin(alpha), hand.y
 
-    def update(self, t):
-        step = int(t)
+    def update(self, t : float):
+        step  = int(t)
         state = self.model.state(step)
         for hand, view in zip(state.hands, self.hands):
             x, z, y = self.hand_position(view, t)
@@ -223,6 +202,7 @@ class View:
             #for i in hand:
             #    self.balls[i].mesh.position = x,z,y
             #    y = y + 10
+        ball : Ball
         for ball in state.balls:
             if ball.tone is not None and ball.time_to_land > 0 and ball.time_to_land < .5:
                 if not self.balls[ball.number].played_sound:
@@ -231,15 +211,15 @@ class View:
             else:
                 self.balls[ball.number].played_sound = False
             if ball.time_to_land > t - step:
-                x0,z0,y0 = self.hand_position(self.hands[ball.source_hand], step - ball.time_flying)
-                x1,z1,y1 = self.hand_position(self.hands[ball.target_hand], step + ball.time_to_land)
+                x0,z0,y0 = self.hand_position(self.hands[ball.source_hand], step - ball.time_flying)  # type: ignore
+                x1,z1,y1 = self.hand_position(self.hands[ball.target_hand], step + ball.time_to_land) # type: ignore
                 a = (ball.time_flying+t-step)/(ball.time_flying + ball.time_to_land)
                 h = self.height_constant*(ball.time_flying + ball.time_to_land)**2
                 x = x0 * (1-a) + x1 * a
                 y = y0 * (1-a) + y1 * a
                 z = z0 * (1-a) + z1 * a + h * 4*a*(1-a)
             else:
-                x, z, y = self.hand_position(self.hands[ball.target_hand], t)
+                x, z, y = self.hand_position(self.hands[ball.target_hand], t) # type: ignore
 
             self.balls[ball.number].mesh.position = x, z, y
 
