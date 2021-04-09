@@ -2,6 +2,7 @@ from graphviz import Digraph
 
 class Automata():
     def __init__(self, nb_balls : int, max_height : int):
+        self.nb_balls = nb_balls
         self.max_height = max_height
         self.initial = [i < nb_balls for i in range(max_height)]
     
@@ -41,6 +42,19 @@ class Automata():
                         raise e
         
         return states, transitions
+
+    def possible_transitions(self, state : List[bool]):
+        transitions = {}
+
+        for time in range(self.max_height + 1):
+            try:
+                transitions[time] = s
+                s = self.transition(state, time)
+            except Exception as e:
+                if e.args[0] != "conflict":
+                    raise e
+        
+        return transitions
 
     def state_str(self, s : list[bool]):
         s1 = ["o" if x else "x" for x in s]
