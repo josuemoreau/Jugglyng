@@ -20,13 +20,13 @@ import pygame as pg
 from recordclass import recordclass, RecordClass
 from pythreejs import Mesh, SphereBufferGeometry, SphereGeometry, OrbitControls, MeshLambertMaterial, MeshStandardMaterial, PerspectiveCamera, Scene, Renderer, AmbientLight
 from numpy import pi, cos, sin
-from typing import Optional, List, Dict, Tuple, Union
+from typing import Optional, List, Dict, Tuple, Union, Any
 
 # utilisation de RecordClass ainsi au lieu de recordclass
 # pour pouvoir utiliser le type Ball dans le typage avec mypy
 class Ball(RecordClass):
     color : str = 'white'
-    tone = None
+    tone : Any = None
     source_hand : Optional[int] = None
     target_hand : Optional[int] = None
     time_flying : int = 0
