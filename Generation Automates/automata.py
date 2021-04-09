@@ -1,4 +1,5 @@
 from graphviz import Digraph
+from typing import List
 
 class Automata():
     def __init__(self, nb_balls : int, max_height : int):
@@ -6,7 +7,7 @@ class Automata():
         self.max_height = max_height
         self.initial = [i < nb_balls for i in range(max_height)]
     
-    def transition(self, state : list[bool], time : int):
+    def transition(self, state : List[bool], time : int):
         s = state.copy()
         r = s[0]
         del s[0]
@@ -56,13 +57,13 @@ class Automata():
         
         return transitions
 
-    def state_str(self, s : list[bool]):
+    def state_str(self, s : List[bool]):
         s1 = ["o" if x else "x" for x in s]
         return "".join(s1)
 
     def draw(self):
         states, transitions = self.generate()
-        dot = Digraph(comment='Juggling Automata', graph_attr={'layout': 'circo'})
+        dot = Digraph(comment='Juggling Automata', graph_attr={'layout': 'dot'})
         for s in states:
             dot.node(self.state_str(s))
         for (s1, a, s2) in transitions:

@@ -1,5 +1,6 @@
 from graphviz import Digraph
 from sage.all import Combinations
+from typing import List
 
 class Automata():
     def __init__(self, nb_balls : int, max_height : int):
@@ -7,7 +8,7 @@ class Automata():
         self.nb_balls = nb_balls
         self.initial = [1 if i < nb_balls else 0 for i in range(max_height)]
     
-    def transition(self, state : list[int], times : list[int]):
+    def transition(self, state : List[int], times : List[int]):
         s = state.copy()
         r = s[0]
         del s[0]
@@ -40,7 +41,7 @@ class Automata():
         
         return states, transitions
 
-    def state_str(self, s : list[int]):
+    def state_str(self, s : List[int]):
         s1 = [str(x) for x in s]
         return "".join(s1)
 
