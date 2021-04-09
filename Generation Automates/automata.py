@@ -49,8 +49,8 @@ class Automata():
 
         for time in range(self.max_height + 1):
             try:
-                transitions[time] = s
                 s = self.transition(state, time)
+                transitions[time] = s
             except Exception as e:
                 if e.args[0] != "conflict":
                     raise e
