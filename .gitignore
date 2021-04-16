@@ -8,3 +8,7 @@ __pycache__/
 *.gv
 
 automata-output/
+
+*.log
+
+*.aux
