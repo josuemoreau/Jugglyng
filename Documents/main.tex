@@ -1,0 +1,115 @@
+\documentclass[a4paper, 11pt]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage[margin=2.5cm]{geometry}
+
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{graphics}
+\usepackage{enumitem}
+\usepackage{frame}
+
+% \title{Rapport de stage\\\normalsize{Automates et jonglerie musicale}}
+\title{Automates et jonglerie musicale}
+\author{Josué Moreau}
+
+\theoremstyle{plain}
+\newtheorem{thm}{Théorème}[]
+
+\begin{document}
+
+\maketitle
+
+\begin{thm}
+  Soit $\mathcal{A}$ un automate de jonglage à $b$ balles et de hauteur maximale
+  $h$. Soit une séquence $s$ de longueur au moins $h - 1$. Alors, soit $s$
+  apparaît une unique fois dans $\mathcal{A}$, soit $s$ n'apparaît pas dans
+  $\mathcal{A}$.
+\end{thm}
+
+\begin{proof}
+  Soit $\mathcal{A}$ un automate de jonglage à $b$ balles et de hauteur maximale
+  $h$. Soit une séquence $s$ de longueur au moins $h - 1$.
+  \begin{itemize}
+  \item Si $s$ n'apparaît pas dans $\mathcal{A}$, alors on a bien le résultat
+    voulu.
+  \item Si $s$ apparaît dans $\mathcal{A}$. Nécessairement $s$ se joue avec
+    exactement $b$ balles.
+    \begin{enumerate}
+    \item Si $s$ est de longueur au moins $h$. Posons, pour tout
+      $0 \leq i < |s| + h$ :
+      \[
+        s_i^t =
+        \left\{
+          \begin{array}{ll}
+            0 & \text{s'il existe } t \leq j < i \text{ tel que } j + s_j = i\\
+            s_i & \text{sinon}
+          \end{array}
+        \right.
+      \]
+      et
+      \[
+        b_i^t =
+        \left\{
+          \begin{array}{ll}
+            0 & \text{si } s_i^t = 0\\
+            1 & \text{sinon}
+          \end{array}
+        \right.
+      \]
+      On peut alors définir $e_t = b_t^t\;b_{t + 1}^t\; ... \;b_{t + h - 1}^t$.
+      On a bien $e_t \xrightarrow{s_t} e_{t + 1}$ dans $\mathcal{A}$ car :
+      \begin{itemize}
+      \item Si $s_t = 0$, alors $s_{t + s_t}^{t} = s_t^t = s_t = 0$. De plus,
+        $s_{t + h}^t = 0$ car une balle atterrit nécessairement au temps
+        $t + h$, sinon on introduirait une nouvelle balle, ce qui engendrerait
+        une séquence à plus de $b$ balles, non représentable dans l'automate
+        $\mathcal{A}$. Donc $e_{t + 1}$ est égal à $e_t$ auquel on a ajouté un
+        $0$ à droite et enlevé $b_t^t$. Ainsi, la transition
+        $e_t \xrightarrow{s_t} e_{t + 1}$ est bien dans $\mathcal{A}$.
+      \item Si $s_t > 0$.
+        \begin{itemize}
+        \item $s_{t + s_t}^t = 0$ donc $b_{t + s_t}^t = 0$ donc, si $s_t < h$,
+          $e_t[s_t] = 0$.
+        \item $s_{t + s_t}^{t + 1} = s_{t + s_t} \neq 0$ car sinon
+          $s_{t + s_t} = 0$ et alors $s$ ne serait pas une séquence de jonglage
+          (la balle lancée en $t$ sur une hauteur $s_t$ ne serait pas relancée
+          en $t + s_t$). Donc, $b_{t + s_t}^{t + 1} = 1$ donc
+          $e_{t + 1}[s_t - 1] = 1$. Ainsi, on a bien
+          $e_t \xrightarrow{s_t} e_{t + 1}$.
+        \end{itemize}
+      \end{itemize}
+      Il n'existe pas d'autre suite d'état dans l'automate $\mathcal{A}$ qui
+      représente la même séquence. En effet, dans le cas contraire, il
+      existerait un état $e_t'$ pour un certain $t$ tel que $e_t' \neq e_t$.
+      Donc, il existerait $0 \leq i < h$ tel que $e_t'[i] = 1$ et $e_t[i] = 0$.
+      Donc il existerait $t \leq j < t + i$ tel que $j + s_j = t + i$ et
+      $e_t'[i] = 1$. On aurait alors un conflit car une balle va atterrir au
+      temps $t + i$ alors qu'une autre balle va être lancée au temps $t + j$
+      pour atterrir aussi au temps $t + i$. Ainsi, $e_0, ..., e_|s|$ est unique.
+    \item Si $s$ est de longueur $h - 1$. Alors,
+      \begin{itemize}
+      \item Si elle se joue à $b$ balles. Alors, il suffit, pour tout
+        $0 \leq i < h$, de mettre un $0$ en position $h - i - 1$ de l'état
+        $e_i$. La même séquence avec des nombres différents de $0$ à ces
+        emplacement n'est pas dans $\mathcal{A}$ car elle nécessiterait $b + 1$
+        balles ou comporterait des conflits.
+      \item Si elle se joue à $b - 1$ balles, alors on fait la même chose qu'au
+        point précédent avec uniquement des $1$. La même séquence avec des
+        nombres différents de $1$ à ces emplacements n'est pas dans
+        $\mathcal{A}$ car elle nécessiterait alors $b - 1$ balles ou
+        comporterait des conflits.
+      \end{itemize}
+    \end{enumerate}
+  \end{itemize}
+  Ainsi, soit une séquence $s$ de longueur au moins $h - 1$, $s$ apparaît une
+  unique fois dans $\mathcal{A}$ ou n'apparaît pas dans $\mathcal{A}$.
+\end{proof}
+
+\end{document}
+
+% LocalWords:  jonglage
