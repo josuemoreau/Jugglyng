@@ -13,7 +13,6 @@ information
 """
 
 import copy
-import simpleaudio
 import collections
 import time
 import pygame as pg
