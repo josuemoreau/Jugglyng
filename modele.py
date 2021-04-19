@@ -58,8 +58,8 @@ class Model:
     states : List[State]
     number_of_hands : int
     time_in_hand : float
-    pattern : List[int]
-
+    # pattern : List[Tuple[int, int, int]]
+    pattern : List[Tuple[int, int]]
 
     """
     # Hypotheses
@@ -71,7 +71,7 @@ class Model:
     # - hands: a tuple of list of ball numbers:
     #   for each hand, the numbers of the balls it holds
     """
-    def __init__(self, *hand_content : List[dict], pattern : List[int] = [3]):
+    def __init__(self, *hand_content : List[dict], pattern : List[Tuple[int, int]] = [(1, 0)]): #[(0, 0, 2)]):
         balls : List[Ball] = []
         hands : List[List[Optional[int]]] = []
 
@@ -100,13 +100,26 @@ class Model:
         self.states = [State(balls=ballst, hands=handst)]
         self.number_of_hands = len(handst)
         self.time_in_hand = 0.9
-        self.pattern=pattern
 
-    def throw(self, t : int):
-        duration = self.pattern[t % len(self.pattern)]
+        # pattern1 = []
+        # for (sh, dh, d) in pattern:
+        #     pattern1.append((sh, dh, 2 * d))
+        #     pattern1.append((0, 0, 0))
+
+        # self.pattern=pattern1
+        self.pattern = pattern
+
+    def throw(self, t : int) -> Throw:
+        if self.pattern[t % len(self.pattern)] is None:
+            return Throw(source_hand=0, target_hand=0, duration=0)
+        d, dh = self.pattern[t % len(self.pattern)]
+        # duration = self.pattern[t % len(self.pattern)]
+        # return Throw(source_hand = t % self.number_of_hands,
+        #              target_hand = (t + duration) % self.number_of_hands,
+        #              duration = duration)
         return Throw(source_hand = t % self.number_of_hands,
-                     target_hand = (t + duration) % self.number_of_hands,
-                     duration = duration)
+                     target_hand = dh,
+                     duration = d)
 
     def transition(self, state : State, throw : Throw):
         hands = copy.deepcopy(state.hands)
@@ -135,7 +148,8 @@ class Model:
 
     def state(self, t : int):
         for t1 in range(len(self.states)-1, t):
-            self.states.append(self.transition(self.states[-1], self.throw(t1)))
+            x = self.throw(t1)
+            self.states.append(self.transition(self.states[-1], x))
         return self.states[t]
 
 class BallView:
