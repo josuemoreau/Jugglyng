@@ -81,7 +81,7 @@ class Model:
             hand : List[Optional[int]] = []
             for color in content:
                 if isinstance(color, dict):
-                    tone = pg.mixer.Sound(color["tone"] + ".wav")
+                    tone = pg.mixer.Sound("sounds/{}.wav".format(color["tone"]))
                     color = color["color"]
                 else:
                     tone = None
