@@ -15,7 +15,7 @@ information
 import copy
 import collections
 import time
-import pygame as pg
+from audio import Audio
 from recordclass import recordclass, RecordClass
 from pythreejs import Mesh, SphereBufferGeometry, SphereGeometry, OrbitControls, MeshLambertMaterial, MeshStandardMaterial, PerspectiveCamera, Scene, Renderer, AmbientLight
 from numpy import pi, cos, sin
@@ -50,8 +50,6 @@ State=collections.namedtuple('State',
 Throw=collections.namedtuple('Throw',
                              ['source_hand', 'target_hand', 'duration'])
 
-pg.mixer.init()
-
 class Model:
 
     balls : Tuple[Ball, ...]
@@ -81,7 +79,7 @@ class Model:
             hand : List[Optional[int]] = []
             for color in content:
                 if isinstance(color, dict):
-                    tone = pg.mixer.Sound(color["tone"] + ".wav")
+                    tone = Audio(color["tone"] + ".wav")
                     color = color["color"]
                 else:
                     tone = None
