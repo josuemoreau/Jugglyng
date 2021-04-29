@@ -222,6 +222,8 @@ def throws_to_extended_exact_cover(balls : Set[str], throws : List[List[Throw]],
                                    hand, fm)])
                     for fnext in f2seqs[flying_time]:
                         row.append(i_items[(t + 1, hand, fnext)])
+                    for t1 in range(t, t + throw.max_height - flying_time + 1):
+                        row.append(w_items[(t1, hand)])
                     rows.append(row)
 
     return ExactCoverInstance(x_items=list(x_items.values()), 
