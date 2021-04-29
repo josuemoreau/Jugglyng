@@ -21,6 +21,9 @@ class Throw(RecordClass):
     def __hash__(self):
         return hash((self.ball, self.time, self.max_height))
 
+    def latex(self):
+        return self.__str__()
+
 def music_to_throws(music : List[Tuple[int, str]]) \
         -> Tuple[Set[str], List[List[Throw]]]:
     notes : Set[str] = {n for t, n in music}
@@ -57,6 +60,11 @@ class XItem(RecordClass):
     def __hash__(self):
         return hash((self.throw, self.hand, self.flying_time))
 
+    def latex(self):
+        return r"x_{}^{} & ".format("{" + str(self.throw) + "}", 
+                                    "{" + str(self.hand) + ", " 
+                                        + str(self.flying_time) + "}")
+
 class LItem(RecordClass):
     throw : Throw
 
@@ -68,6 +76,9 @@ class LItem(RecordClass):
 
     def __hash__(self):
         return hash((self.throw))
+
+    def latex(self):
+        return r"l_{} & ".format("{" + str(self.throw) + "}")
 
 class WItem(RecordClass):
     time : int
@@ -82,6 +93,10 @@ class WItem(RecordClass):
 
     def __hash__(self):
         return hash((self.time, self.hand))
+
+    def latex(self):
+        return r"w_{} & ".format("{" + str(self.time) + ", " 
+                                     + str(self.hand) + "}")
 
 class IItem(RecordClass):
     time : int
@@ -99,6 +114,11 @@ class IItem(RecordClass):
     def __hash__(self):
         return hash((self.time, self.hand, self.flying_time))
 
+    def latex(self):
+        return r"i_{} & ".format("{" + str(self.time) + ", " 
+                                     + str(self.hand) + ", " 
+                                     + str(self.flying_time) + "}")
+
 class MItem(RecordClass):
     time : int
     hand : int
@@ -113,6 +133,11 @@ class MItem(RecordClass):
 
     def __hash__(self):
         return hash((self.time, self.hand, self.multiplex))
+
+    def latex(self):
+        return r"m_{} & ".format("{" + str(self.time) + ", " 
+                                     + str(self.hand) + ", " 
+                                     + str(self.multiplex) + "}")
 
 class ExactCoverInstance(RecordClass):
     x_items : List[XItem] = []
@@ -223,9 +248,7 @@ def latex_x_items_columns(x_items):
     cnt = 0
     for x in x_items:
         d[x] = cnt
-        s += r"x_{}^{} & ".format("{" + str(x.throw) + "}", 
-                                  "{" + str(x.hand) + ", " 
-                                      + str(x.flying_time) + "}")
+        s += x.latex()
         cnt += 1
     return s, d
 
@@ -235,7 +258,7 @@ def latex_l_items_columns(l_items):
     cnt = 0
     for l in l_items:
         d[l] = cnt
-        s += r"l_{} & ".format("{" + str(l.throw) + "}")
+        s += l.latex()
         cnt += 1
     return s, d
 
@@ -245,7 +268,7 @@ def latex_w_items_columns(w_items):
     cnt = 0
     for w in w_items:
         d[w] = cnt
-        s += r"w_{} & ".format("{" + str(w.time) + ", " + str(w.hand) + "}")
+        s += w.latex()
         cnt += 1
     return s, d
 
@@ -255,8 +278,7 @@ def latex_i_items_columns(i_items):
     cnt = 0
     for i in i_items:
         d[i] = cnt
-        s += r"i_{} & ".format("{" + str(i.time) + ", " + str(i.hand) + ", " 
-                                   + str(i.flying_time) + "}")
+        s += i.latex()
         cnt += 1
     return s, d
 
@@ -266,8 +288,7 @@ def latex_m_items_columns(m_items):
     cnt = 0
     for m in m_items:
         d[m] = cnt
-        s += r"m_{} & ".format("{" + str(m.time) + ", " + str(m.hand) + ", " 
-                                   + str(m.multiplex) + "}")
+        s += m.latex()
         cnt += 1
     return s, d
 
