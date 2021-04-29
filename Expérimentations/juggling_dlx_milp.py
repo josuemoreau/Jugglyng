@@ -1,5 +1,6 @@
 from recordclass import RecordClass
 from typing import Optional, List, Dict, Tuple, Union, Any, Set
+from sage.all import MixedIntegerLinearProgram
 
 # musique = [( 1, "do"), ( 2, "do"), ( 3, "do"), 
 #            ( 4, "ré"), ( 5, "mi"), ( 7, "ré"), 
@@ -234,12 +235,66 @@ def throws_to_extended_exact_cover(balls : Set[str], throws : List[List[Throw]],
                               w_items_bounds=(0,K),
                               rows=rows)
 
-# =============================================================================
-#
-# FONCTIONS DE GÉNÉRATION DE LATEX POUR AFFICHER LA TABLE ENTIÈRE REPRÉSENTANT
-#                L'INSTANCE DE EXACT COVER GENERALISÉ
-#
-# =============================================================================
+def solve_exact_cover_with_milp(ec_instance : ExactCoverInstance):
+    p = MixedIntegerLinearProgram()
+
+    # Calcul, pour chaque colonne, des lignes qui ont un élément dans cette
+    # colonne
+    d : Dict[Union[XItem, LItem, WItem, IItem, MItem], List[int]] \
+        = {item: [] for item in ec_instance.x_items + ec_instance.l_items +
+                                ec_instance.w_items + ec_instance.i_items +
+                                ec_instance.m_items}
+    for i in range(len(ec_instance.rows)):
+        row = ec_instance.rows[i]
+        for item in row:
+            d[item].append(i)
+
+    # Génération de l'instance de MILP
+    x = p.new_variable(binary=True)
+    for item in ec_instance.x_items:
+        if len(d[item]) > 0:
+            rows_vars = [x[i] for i in d[item]]
+            p.add_constraint(ec_instance.x_items_bounds[0] 
+                             <= sum(rows_vars) 
+                             <= ec_instance.x_items_bounds[1])
+    for item in ec_instance.l_items:
+        if len(d[item]) > 0:
+            rows_vars = [x[i] for i in d[item]]
+            p.add_constraint(ec_instance.l_items_bounds[0]
+                             <= sum(rows_vars)
+                             <= ec_instance.l_items_bounds[1])
+    for item in ec_instance.w_items:
+        if len(d[item]) > 0:
+            rows_vars = [x[i] for i in d[item]]
+            p.add_constraint(ec_instance.w_items_bounds[0] 
+                             <= sum(rows_vars) 
+                             <= ec_instance.w_items_bounds[1])
+    for item in ec_instance.i_items:
+        if len(d[item]) > 0:
+            rows_vars = [x[i] for i in d[item]]
+            p.add_constraint(ec_instance.i_items_bounds[0] 
+                             <= sum(rows_vars) 
+                             <= ec_instance.i_items_bounds[1])
+    for item in ec_instance.m_items:
+        if len(d[item]) > 0:
+            rows_vars = [x[i] for i in d[item]]
+            p.add_constraint(ec_instance.m_items_bounds[0] 
+                             <= sum(rows_vars) 
+                             <= ec_instance.m_items_bounds[1])
+
+    # Résolution
+    p.solve()
+    selected_rows = p.get_values(x)
+
+    return [ec_instance.rows[i] for i in selected_rows 
+                                if selected_rows[i] == 1.0]
+
+# ============================================================================ #
+#                                                                              #
+# FONCTIONS DE GÉNÉRATION DE LATEX POUR AFFICHER LA TABLE ENTIÈRE REPRÉSENTANT #
+#                L'INSTANCE DE EXACT COVER GENERALISÉ                          #
+#                                                                              #
+# ============================================================================ #
 
 from pylatex import Document
 from pylatex.utils import NoEscape
