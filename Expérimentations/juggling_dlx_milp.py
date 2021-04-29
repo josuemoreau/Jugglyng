@@ -61,7 +61,7 @@ class XItem(RecordClass):
         return hash((self.throw, self.hand, self.flying_time))
 
     def latex(self):
-        return r"x_{}^{} & ".format("{" + str(self.throw) + "}", 
+        return r"x_{}^{}".format("{" + str(self.throw) + "}", 
                                     "{" + str(self.hand) + ", " 
                                         + str(self.flying_time) + "}")
 
@@ -78,7 +78,7 @@ class LItem(RecordClass):
         return hash((self.throw))
 
     def latex(self):
-        return r"l_{} & ".format("{" + str(self.throw) + "}")
+        return r"l_{}".format("{" + str(self.throw) + "}")
 
 class WItem(RecordClass):
     time : int
@@ -95,7 +95,7 @@ class WItem(RecordClass):
         return hash((self.time, self.hand))
 
     def latex(self):
-        return r"w_{} & ".format("{" + str(self.time) + ", " 
+        return r"w_{}".format("{" + str(self.time) + ", " 
                                      + str(self.hand) + "}")
 
 class IItem(RecordClass):
@@ -115,7 +115,7 @@ class IItem(RecordClass):
         return hash((self.time, self.hand, self.flying_time))
 
     def latex(self):
-        return r"i_{} & ".format("{" + str(self.time) + ", " 
+        return r"i_{}".format("{" + str(self.time) + ", " 
                                      + str(self.hand) + ", " 
                                      + str(self.flying_time) + "}")
 
@@ -135,7 +135,7 @@ class MItem(RecordClass):
         return hash((self.time, self.hand, self.multiplex))
 
     def latex(self):
-        return r"m_{} & ".format("{" + str(self.time) + ", " 
+        return r"m_{}".format("{" + str(self.time) + ", " 
                                      + str(self.hand) + ", " 
                                      + str(self.multiplex) + "}")
 
@@ -248,7 +248,7 @@ def latex_x_items_columns(x_items):
     cnt = 0
     for x in x_items:
         d[x] = cnt
-        s += x.latex()
+        s += x.latex() + " & "
         cnt += 1
     return s, d
 
@@ -258,7 +258,7 @@ def latex_l_items_columns(l_items):
     cnt = 0
     for l in l_items:
         d[l] = cnt
-        s += l.latex()
+        s += l.latex() + " & "
         cnt += 1
     return s, d
 
@@ -268,7 +268,7 @@ def latex_w_items_columns(w_items):
     cnt = 0
     for w in w_items:
         d[w] = cnt
-        s += w.latex()
+        s += w.latex() + " & "
         cnt += 1
     return s, d
 
@@ -278,7 +278,7 @@ def latex_i_items_columns(i_items):
     cnt = 0
     for i in i_items:
         d[i] = cnt
-        s += i.latex()
+        s += i.latex() + " & "
         cnt += 1
     return s, d
 
@@ -288,7 +288,7 @@ def latex_m_items_columns(m_items):
     cnt = 0
     for m in m_items:
         d[m] = cnt
-        s += m.latex()
+        s += m.latex() + " & "
         cnt += 1
     return s, d
 
@@ -320,7 +320,7 @@ def latex_rows_full_table(dx, dl, dw, di, dm, rows):
     
     return rows_latex
 
-def latex_full_table(ec_instance):
+def latex_full_table(ec_instance : ExactCoverInstance):
     sx, dx = latex_x_items_columns(ec_instance.x_items)
     sl, dl = latex_l_items_columns(ec_instance.l_items)
     sw, dw = latex_w_items_columns(ec_instance.w_items)
@@ -341,9 +341,43 @@ def latex_full_table(ec_instance):
     
     return s
 
-def generate_full_table(ec_instance):
+def generate_full_table(ec_instance : ExactCoverInstance):
     ltx = latex_full_table(ec_instance)
     doc = Document('full_table', 
+                   documentclass='standalone', 
+                   document_options={
+                       'border':'2.5cm'
+                   })
+    ltxs = '$' + ltx + '$'
+    doc.append(NoEscape(ltxs))
+    doc.generate_pdf()
+
+def item_key(ec_instance : ExactCoverInstance):
+    items = ec_instance.x_items + ec_instance.l_items + ec_instance.w_items \
+            + ec_instance.i_items + ec_instance.m_items
+
+    return lambda x: items.index(x)
+
+def latex_table(ec_instance : ExactCoverInstance):
+    nb_cols = max([len(row) for row in ec_instance.rows])
+    key = item_key(ec_instance)
+
+    s = r"\begin{array}{" + "c" * nb_cols + "}"
+    s += r"\hline "
+    for row in ec_instance.rows:
+        sorted_row = sorted(row, key=key)
+        row_latex = sorted_row[0].latex()
+        for i in range(1, len(sorted_row)):
+            row_latex += " & " + sorted_row[i].latex()
+        s += row_latex + r"\\"
+    s += r"\hline "
+    s += r"\end{array}"
+    
+    return s
+
+def generate_table(ec_instance):
+    ltx = latex_table(ec_instance)
+    doc = Document('table', 
                    documentclass='standalone', 
                    document_options={
                        'border':'2.5cm'
