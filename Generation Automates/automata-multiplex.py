@@ -2,13 +2,14 @@ from graphviz import Digraph
 from sage.all import Combinations
 from typing import List
 
+
 class Automata():
-    def __init__(self, nb_balls : int, max_height : int):
+    def __init__(self, nb_balls: int, max_height: int):
         self.max_height = max_height
         self.nb_balls = nb_balls
         self.initial = [1 if i < nb_balls else 0 for i in range(max_height)]
-    
-    def transition(self, state : List[int], times : List[int]):
+
+    def transition(self, state: List[int], times: List[int]):
         s = state.copy()
         r = s[0]
         del s[0]
@@ -33,15 +34,15 @@ class Automata():
                 try:
                     s = self.transition(state, c)
                     transitions.append((state, c, s))
-                    if not s in states and not s in queue:
+                    if s not in states and s not in queue:
                         queue.append(s)
                 except Exception as e:
                     if e.args[0] != "error":
                         raise e
-        
+
         return states, transitions
 
-    def state_str(self, s : List[int]):
+    def state_str(self, s: List[int]):
         s1 = [str(x) for x in s]
         return "".join(s1)
 
@@ -53,9 +54,9 @@ class Automata():
         for (s1, a, s2) in transitions:
             dot.edge(self.state_str(s1), self.state_str(s2), label=str(a), constraint='true')
         dot.render('automata-output/automata-multiplex-'
-                    + str(self.nb_balls) + '-'
-                    + str(self.max_height)
-                    + '.gv', view=True)
+                   + str(self.nb_balls) + '-'
+                   + str(self.max_height)
+                   + '.gv', view=True)
 
 
 if __name__ == "__main__":

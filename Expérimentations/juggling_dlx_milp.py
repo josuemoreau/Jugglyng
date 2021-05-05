@@ -1,16 +1,20 @@
 from recordclass import RecordClass
-from typing import Optional, List, Dict, Tuple, Union, Any, Set
+from typing import List, Dict, Tuple, Union, Set
 from sage.all import MixedIntegerLinearProgram
 
-# musique = [( 1, "do"), ( 2, "do"), ( 3, "do"), 
-#            ( 4, "ré"), ( 5, "mi"), ( 7, "ré"), 
+from pylatex import Document
+from pylatex.utils import NoEscape
+
+# musique = [( 1, "do"), ( 2, "do"), ( 3, "do"),
+#            ( 4, "ré"), ( 5, "mi"), ( 7, "ré"),
 #            ( 9, "do"), (10, "mi"), (11, "ré"),
 #            (12, "ré"), (13, "do")]
 
+
 class Throw(RecordClass):
-    ball : str
-    time : int
-    max_height : int
+    ball: str
+    time: int
+    max_height: int
 
     def __eq__(self, other):
         return type(other) == Throw and self.ball == other.ball \
@@ -25,12 +29,13 @@ class Throw(RecordClass):
     def latex(self):
         return self.__str__()
 
-def music_to_throws(music : List[Tuple[int, str]]) \
+
+def music_to_throws(music: List[Tuple[int, str]]) \
         -> Tuple[Set[str], List[List[Throw]]]:
-    notes : Set[str] = {n for t, n in music}
+    notes: Set[str] = {n for t, n in music}
     sorted_music = sorted(music, key=lambda x: x[0])
-    flying_note_time : Dict[str, int] = {n: 0 for n in notes}
-    throws : List[List[Throw]] = []
+    flying_note_time: Dict[str, int] = {n: 0 for n in notes}
+    throws: List[List[Throw]] = []
     time = 0
     for t, n in sorted_music:
         for n1 in notes:
@@ -38,17 +43,18 @@ def music_to_throws(music : List[Tuple[int, str]]) \
         for i in range(time, t):
             throws.append([])
         time = t
-        throw = Throw(ball=n, 
-                      time=t - flying_note_time[n], 
+        throw = Throw(ball=n,
+                      time=t - flying_note_time[n],
                       max_height=flying_note_time[n])
         throws[t - flying_note_time[n]].append(throw)
         flying_note_time[n] = 0
     return notes, throws
 
+
 class XItem(RecordClass):
-    throw : Throw
-    hand : int
-    flying_time : int
+    throw: Throw
+    hand: int
+    flying_time: int
 
     def __eq__(self, other):
         return type(other) == XItem and self.throw == other.throw \
@@ -62,12 +68,13 @@ class XItem(RecordClass):
         return hash((self.throw, self.hand, self.flying_time))
 
     def latex(self):
-        return r"x_{}^{}".format("{" + str(self.throw) + "}", 
-                                    "{" + str(self.hand) + ", " 
-                                        + str(self.flying_time) + "}")
+        return r"x_{}^{}".format("{" + str(self.throw) + "}",
+                                 "{" + str(self.hand) + ", "
+                                 + str(self.flying_time) + "}")
+
 
 class LItem(RecordClass):
-    throw : Throw
+    throw: Throw
 
     def __eq__(self, other):
         return type(other) == LItem and self.throw == other.throw
@@ -81,9 +88,10 @@ class LItem(RecordClass):
     def latex(self):
         return r"l_{}".format("{" + str(self.throw) + "}")
 
+
 class WItem(RecordClass):
-    time : int
-    hand : int
+    time: int
+    hand: int
 
     def __eq__(self, other):
         return type(other) == WItem and self.time == other.time \
@@ -96,13 +104,14 @@ class WItem(RecordClass):
         return hash((self.time, self.hand))
 
     def latex(self):
-        return r"w_{}".format("{" + str(self.time) + ", " 
-                                     + str(self.hand) + "}")
+        return r"w_{}".format("{" + str(self.time) + ", "
+                              + str(self.hand) + "}")
+
 
 class IItem(RecordClass):
-    time : int
-    hand : int
-    flying_time : int
+    time: int
+    hand: int
+    flying_time: int
 
     def __eq__(self, other):
         return type(other) == IItem and self.time == other.time \
@@ -116,14 +125,15 @@ class IItem(RecordClass):
         return hash((self.time, self.hand, self.flying_time))
 
     def latex(self):
-        return r"i_{}".format("{" + str(self.time) + ", " 
-                                     + str(self.hand) + ", " 
-                                     + str(self.flying_time) + "}")
+        return r"i_{}".format("{" + str(self.time) + ", "
+                              + str(self.hand) + ", "
+                              + str(self.flying_time) + "}")
+
 
 class MItem(RecordClass):
-    time : int
-    hand : int
-    multiplex : Tuple[int,]
+    time: int
+    hand: int
+    multiplex: Tuple[int, ]
 
     def __eq__(self, other):
         return type(other) == MItem and self.time == other.time \
@@ -136,38 +146,40 @@ class MItem(RecordClass):
         return hash((self.time, self.hand, self.multiplex))
 
     def latex(self):
-        return r"m_{}".format("{" + str(self.time) + ", " 
-                                     + str(self.hand) + ", " 
-                                     + str(self.multiplex) + "}")
+        return r"m_{}".format("{" + str(self.time) + ", "
+                              + str(self.hand) + ", "
+                              + str(self.multiplex) + "}")
+
 
 class ExactCoverInstance(RecordClass):
-    x_items : List[XItem] = []
-    l_items : List[LItem] = []
-    w_items : List[WItem] = []
-    i_items : List[IItem] = []
-    m_items : List[MItem] = []
-    
-    x_items_bounds : Tuple[int, int] = (0, 1)
-    l_items_bounds : Tuple[int, int] = (1, 1)
-    w_items_bounds : Tuple[int, int] = (0, 1)
-    i_items_bounds : Tuple[int, int] = (0, 1)
-    m_items_bounds : Tuple[int, int] = (0, 1)
+    x_items: List[XItem] = []
+    l_items: List[LItem] = []
+    w_items: List[WItem] = []
+    i_items: List[IItem] = []
+    m_items: List[MItem] = []
 
-    rows : List[List[Union[XItem, LItem, WItem, IItem, MItem]]] = []
+    x_items_bounds: Tuple[int, int] = (0, 1)
+    l_items_bounds: Tuple[int, int] = (1, 1)
+    w_items_bounds: Tuple[int, int] = (0, 1)
+    i_items_bounds: Tuple[int, int] = (0, 1)
+    m_items_bounds: Tuple[int, int] = (0, 1)
 
-def throws_to_extended_exact_cover(balls : Set[str], throws : List[List[Throw]], 
-                                   nb_hands : int, H : int, K : int,
-                                   forbidden_multiplex : List[Tuple[int,]],
-                                   forbidden_2sequences : List[Tuple[int, int]]) \
-                                       -> ExactCoverInstance:
+    rows: List[List[Union[XItem, LItem, WItem, IItem, MItem]]] = []
+
+
+def throws_to_extended_exact_cover(balls: Set[str], throws: List[List[Throw]],
+                                   nb_hands: int, H: int, K: int,
+                                   forbidden_multiplex: List[Tuple[int, ]],
+                                   forbidden_2sequences: List[Tuple[int, int]]) \
+        -> ExactCoverInstance:
     max_time = 0
     x_items = {}
     l_items = {}
     w_items = {}
     i_items = {}
     m_items = {}
-    fmultiplex : Dict[int, List[Tuple[int,]]] = {i: [] for i in range(1, H + 1)}
-    f2seqs : Dict[int, List[int]] = {i: [] for i in range(1, H + 1)}
+    fmultiplex: Dict[int, List[Tuple[int, ]]] = {i: [] for i in range(1, H + 1)}
+    f2seqs: Dict[int, List[int]] = {i: [] for i in range(1, H + 1)}
     rows = []
     # Remplissage du dictionnaire des lancers multiplex interdits
     for fm in forbidden_multiplex:
@@ -188,8 +200,8 @@ def throws_to_extended_exact_cover(balls : Set[str], throws : List[List[Throw]],
     # Génération des items x et I
     for t in range(len(throws)):
         for throw in throws[t]:
-            l = LItem(throw=throw)
-            l_items[throw] = l
+            u = LItem(throw=throw)
+            l_items[throw] = u
 
             for hand in range(nb_hands):
                 for flying_time in range(1, min(H, throw.max_height) + 1):
@@ -227,23 +239,24 @@ def throws_to_extended_exact_cover(balls : Set[str], throws : List[List[Throw]],
                         row.append(w_items[(t1, hand)])
                     rows.append(row)
 
-    return ExactCoverInstance(x_items=list(x_items.values()), 
-                              l_items=list(l_items.values()), 
-                              w_items=list(w_items.values()), 
-                              i_items=list(i_items.values()), 
-                              m_items=list(m_items.values()), 
-                              w_items_bounds=(0,K),
+    return ExactCoverInstance(x_items=list(x_items.values()),
+                              l_items=list(l_items.values()),
+                              w_items=list(w_items.values()),
+                              i_items=list(i_items.values()),
+                              m_items=list(m_items.values()),
+                              w_items_bounds=(0, K),
                               rows=rows)
 
-def solve_exact_cover_with_milp(ec_instance : ExactCoverInstance):
+
+def solve_exact_cover_with_milp(ec_instance: ExactCoverInstance):
     p = MixedIntegerLinearProgram()
 
     # Calcul, pour chaque colonne, des lignes qui ont un élément dans cette
     # colonne
-    d : Dict[Union[XItem, LItem, WItem, IItem, MItem], List[int]] \
-        = {item: [] for item in ec_instance.x_items + ec_instance.l_items +
-                                ec_instance.w_items + ec_instance.i_items +
-                                ec_instance.m_items}
+    d: Dict[Union[XItem, LItem, WItem, IItem, MItem], List[int]] \
+        = {item: [] for item in ec_instance.x_items + ec_instance.l_items
+            + ec_instance.w_items + ec_instance.i_items
+            + ec_instance.m_items}
     for i in range(len(ec_instance.rows)):
         row = ec_instance.rows[i]
         for item in row:
@@ -254,8 +267,8 @@ def solve_exact_cover_with_milp(ec_instance : ExactCoverInstance):
     for item in ec_instance.x_items:
         if len(d[item]) > 0:
             rows_vars = [x[i] for i in d[item]]
-            p.add_constraint(ec_instance.x_items_bounds[0] 
-                             <= sum(rows_vars) 
+            p.add_constraint(ec_instance.x_items_bounds[0]
+                             <= sum(rows_vars)
                              <= ec_instance.x_items_bounds[1])
     for item in ec_instance.l_items:
         if len(d[item]) > 0:
@@ -266,28 +279,27 @@ def solve_exact_cover_with_milp(ec_instance : ExactCoverInstance):
     for item in ec_instance.w_items:
         if len(d[item]) > 0:
             rows_vars = [x[i] for i in d[item]]
-            p.add_constraint(ec_instance.w_items_bounds[0] 
-                             <= sum(rows_vars) 
+            p.add_constraint(ec_instance.w_items_bounds[0]
+                             <= sum(rows_vars)
                              <= ec_instance.w_items_bounds[1])
     for item in ec_instance.i_items:
         if len(d[item]) > 0:
             rows_vars = [x[i] for i in d[item]]
-            p.add_constraint(ec_instance.i_items_bounds[0] 
-                             <= sum(rows_vars) 
+            p.add_constraint(ec_instance.i_items_bounds[0]
+                             <= sum(rows_vars)
                              <= ec_instance.i_items_bounds[1])
     for item in ec_instance.m_items:
         if len(d[item]) > 0:
             rows_vars = [x[i] for i in d[item]]
-            p.add_constraint(ec_instance.m_items_bounds[0] 
-                             <= sum(rows_vars) 
+            p.add_constraint(ec_instance.m_items_bounds[0]
+                             <= sum(rows_vars)
                              <= ec_instance.m_items_bounds[1])
 
     # Résolution
     p.solve()
     selected_rows = p.get_values(x)
 
-    return [ec_instance.rows[i] for i in selected_rows 
-                                if selected_rows[i] == 1.0]
+    return [ec_instance.rows[i] for i in selected_rows if selected_rows[i] == 1.0]
 
 # ============================================================================ #
 #                                                                              #
@@ -296,8 +308,6 @@ def solve_exact_cover_with_milp(ec_instance : ExactCoverInstance):
 #                                                                              #
 # ============================================================================ #
 
-from pylatex import Document
-from pylatex.utils import NoEscape
 
 def latex_x_items_columns(x_items):
     s = ""
@@ -309,15 +319,17 @@ def latex_x_items_columns(x_items):
         cnt += 1
     return s, d
 
+
 def latex_l_items_columns(l_items):
     s = ""
     d = {}
     cnt = 0
-    for l in l_items:
-        d[l] = cnt
-        s += l.latex() + " & "
+    for u in l_items:
+        d[u] = cnt
+        s += u.latex() + " & "
         cnt += 1
     return s, d
+
 
 def latex_w_items_columns(w_items):
     s = ""
@@ -329,6 +341,7 @@ def latex_w_items_columns(w_items):
         cnt += 1
     return s, d
 
+
 def latex_i_items_columns(i_items):
     s = ""
     d = {}
@@ -338,6 +351,7 @@ def latex_i_items_columns(i_items):
         s += i.latex() + " & "
         cnt += 1
     return s, d
+
 
 def latex_m_items_columns(m_items):
     s = ""
@@ -349,17 +363,17 @@ def latex_m_items_columns(m_items):
         cnt += 1
     return s, d
 
+
 def latex_rows_full_table(dx, dl, dw, di, dm, rows):
-    s = ""
     x_offset = 0
     l_offset = x_offset + len(dx)
     w_offset = l_offset + len(dl)
     i_offset = w_offset + len(dw)
     m_offset = i_offset + len(di)
     row_len = m_offset + len(dm)
-    
+
     rows_latex = ""
-    
+
     for row in rows:
         row_elems = ["" for i in range(row_len)]
         for item in row:
@@ -374,20 +388,21 @@ def latex_rows_full_table(dx, dl, dw, di, dm, rows):
             elif isinstance(item, MItem):
                 row_elems[m_offset + dm[item]] = r"\bullet"
         rows_latex += " & ".join(row_elems) + r"\\"
-    
+
     return rows_latex
 
-def latex_full_table(ec_instance : ExactCoverInstance):
+
+def latex_full_table(ec_instance: ExactCoverInstance):
     sx, dx = latex_x_items_columns(ec_instance.x_items)
     sl, dl = latex_l_items_columns(ec_instance.l_items)
     sw, dw = latex_w_items_columns(ec_instance.w_items)
     si, di = latex_i_items_columns(ec_instance.i_items)
     sm, dm = latex_m_items_columns(ec_instance.m_items)
-    
+
     nb_cols = len(ec_instance.x_items) + len(ec_instance.l_items) \
-              + len(ec_instance.w_items) + len(ec_instance.i_items) \
-              + len(ec_instance.m_items)
-    
+        + len(ec_instance.w_items) + len(ec_instance.i_items) \
+        + len(ec_instance.m_items)
+
     s = r"\begin{array}{" + "|" + "c|" * nb_cols + "}"
     s += r"\hline "
     s += sx + sl + sw + si + sm
@@ -395,27 +410,30 @@ def latex_full_table(ec_instance : ExactCoverInstance):
     s += latex_rows_full_table(dx, dl, dw, di, dm, ec_instance.rows)
     s += r"\hline "
     s += r"\end{array}"
-    
+
     return s
 
-def generate_full_table(ec_instance : ExactCoverInstance):
+
+def generate_full_table(ec_instance: ExactCoverInstance):
     ltx = latex_full_table(ec_instance)
-    doc = Document('full_table', 
-                   documentclass='standalone', 
+    doc = Document('full_table',
+                   documentclass='standalone',
                    document_options={
-                       'border':'2.5cm'
+                       'border': '2.5cm'
                    })
     ltxs = '$' + ltx + '$'
     doc.append(NoEscape(ltxs))
     doc.generate_pdf()
 
-def item_key(ec_instance : ExactCoverInstance):
+
+def item_key(ec_instance: ExactCoverInstance):
     items = ec_instance.x_items + ec_instance.l_items + ec_instance.w_items \
-            + ec_instance.i_items + ec_instance.m_items
+        + ec_instance.i_items + ec_instance.m_items
 
     return lambda x: items.index(x)
 
-def latex_table(ec_instance : ExactCoverInstance):
+
+def latex_table(ec_instance: ExactCoverInstance):
     nb_cols = max([len(row) for row in ec_instance.rows])
     key = item_key(ec_instance)
 
@@ -429,15 +447,16 @@ def latex_table(ec_instance : ExactCoverInstance):
         s += row_latex + r"\\"
     s += r"\hline "
     s += r"\end{array}"
-    
+
     return s
+
 
 def generate_table(ec_instance):
     ltx = latex_table(ec_instance)
-    doc = Document('table', 
-                   documentclass='standalone', 
+    doc = Document('table',
+                   documentclass='standalone',
                    document_options={
-                       'border':'2.5cm'
+                       'border': '2.5cm'
                    })
     ltxs = '$' + ltx + '$'
     doc.append(NoEscape(ltxs))
