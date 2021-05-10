@@ -79,7 +79,7 @@ class Model:
             hand : List[Optional[int]] = []
             for color in content:
                 if isinstance(color, dict):
-                    tone = Audio(color["tone"] + ".wav")
+                    tone = Audio("sounds/{}.wav".format(color["tone"]))
                     color = color["color"]
                 else:
                     tone = None
