@@ -121,25 +121,40 @@ class DItem(StructClass):
 
 
 class ExactCoverInstance(StructClass):
+    max_time: int = 0
+    nb_hands: int = 1
+    balls: Set[str] = set()
+
     x_items: List[XItem] = []
     l_items: List[LItem] = []
     w_items: List[WItem] = []
     i_items: List[IItem] = []
     m_items: List[MItem] = []
+    d_items: List[DItem] = []
 
     x_items_bounds: Tuple[int, int] = (0, 1)
     l_items_bounds: Tuple[int, int] = (1, 1)
     w_items_bounds: Tuple[int, int] = (0, 1)
     i_items_bounds: Tuple[int, int] = (0, 1)
     m_items_bounds: Tuple[int, int] = (0, 1)
+    d_items_bounds: Tuple[int, int] = (0, 1)
 
-    rows: List[List[Union[XItem, LItem, WItem, IItem, MItem]]] = []
+    rows: List[List[Union[XItem, LItem, WItem, IItem, MItem, DItem]]] = []
+
+
+class ExactCoverSolution(StructClass):
+    max_time: int = 0
+    nb_hands: int = 1
+    balls: Set[str] = set()
+
+    rows: List[List[Union[XItem, LItem, WItem, IItem, MItem, DItem]]] = []
 
 
 def throws_to_extended_exact_cover(balls: Set[str], throws: List[List[Throw]],
                                    nb_hands: int, H: int, K: int,
                                    forbidden_multiplex: List[Tuple[int, ]],
-                                   forbidden_2sequences: List[Tuple[int, int]]) \
+                                   forbidden_2sequences: List[Tuple[int, int]],
+                                   multiple_throws: bool) \
         -> ExactCoverInstance:
     max_time = 0
     x_items = {}
@@ -147,6 +162,7 @@ def throws_to_extended_exact_cover(balls: Set[str], throws: List[List[Throw]],
     w_items = {}
     i_items = {}
     m_items = {}
+    d_items = {}
     fmultiplex: Dict[int, List[Tuple[int, ]]] = {i: [] for i in range(1, H + 1)}
     f2seqs: Dict[int, List[int]] = {i: [] for i in range(1, H + 1)}
     rows = []
@@ -164,8 +180,8 @@ def throws_to_extended_exact_cover(balls: Set[str], throws: List[List[Throw]],
             for throw in throws[t]:
                 if throw.max_height > max_height:
                     max_height = throw.max_height
-            max_time = t + max_height
-            break
+            if t + max_height > max_time:
+                max_time = t + max_height
     # Génération des items x et I
     for t in range(len(throws)):
         for throw in throws[t]:
@@ -176,11 +192,14 @@ def throws_to_extended_exact_cover(balls: Set[str], throws: List[List[Throw]],
                 for flying_time in range(1, min(H, throw.max_height) + 1):
                     x = XItem(throw=throw, hand=hand, flying_time=flying_time)
                     x_items[(throw, hand, flying_time)] = x
-    # Génération des items w
+    # Génération des items w, M et D
     for t in range(max_time + 1):
         for hand in range(nb_hands):
             w = WItem(time=t, hand=hand)
             w_items[(t, hand)] = w
+
+            d = DItem(time=t, hand=hand)
+            d_items[(t, hand)] = d
 
             for f in forbidden_multiplex:
                 m = MItem(time=t, hand=hand, multiplex=f)
@@ -197,6 +216,8 @@ def throws_to_extended_exact_cover(balls: Set[str], throws: List[List[Throw]],
             for hand in range(nb_hands):
                 for flying_time in range(1, min(H, throw.max_height) + 1):
                     row = [x_items[(throw, hand, flying_time)], l_items[throw]]
+                    if multiple_throws:
+                        row.append(d_items[(t + throw.max_height - flying_time, hand)])
                     if flying_time == throw.max_height:
                         row.append(i_items[(t, hand, flying_time)])
                     for fmulti in fmultiplex[flying_time]:
@@ -213,19 +234,23 @@ def throws_to_extended_exact_cover(balls: Set[str], throws: List[List[Throw]],
                               w_items=list(w_items.values()),
                               i_items=list(i_items.values()),
                               m_items=list(m_items.values()),
+                              d_items=list(d_items.values()),
                               w_items_bounds=(0, K),
-                              rows=rows)
+                              rows=rows,
+                              max_time=max_time,
+                              nb_hands=nb_hands,
+                              balls=balls)
 
 
-def solve_exact_cover_with_milp(ec_instance: ExactCoverInstance):
+def solve_exact_cover_with_milp(ec_instance: ExactCoverInstance) -> ExactCoverSolution:
     p = MixedIntegerLinearProgram()
 
     # Calcul, pour chaque colonne, des lignes qui ont un élément dans cette
     # colonne
-    d: Dict[Union[XItem, LItem, WItem, IItem, MItem], List[int]] \
+    d: Dict[Union[XItem, LItem, WItem, IItem, MItem, DItem], List[int]] \
         = {item: [] for item in ec_instance.x_items + ec_instance.l_items
             + ec_instance.w_items + ec_instance.i_items
-            + ec_instance.m_items}
+            + ec_instance.m_items + ec_instance.d_items}
     for i in range(len(ec_instance.rows)):
         row = ec_instance.rows[i]
         for item in row:
@@ -263,12 +288,22 @@ def solve_exact_cover_with_milp(ec_instance: ExactCoverInstance):
             p.add_constraint(ec_instance.m_items_bounds[0]
                              <= sum(rows_vars)
                              <= ec_instance.m_items_bounds[1])
+    for item in ec_instance.d_items:
+        if len(d[item]) > 0:
+            rows_vars = [x[i] for i in d[item]]
+            p.add_constraint(ec_instance.d_items_bounds[0]
+                             <= sum(rows_vars)
+                             <= ec_instance.d_items_bounds[1])
 
     # Résolution
     p.solve()
     selected_rows = p.get_values(x)
 
-    return [ec_instance.rows[i] for i in selected_rows if selected_rows[i] == 1.0]
+    return ExactCoverSolution(max_time=ec_instance.max_time,
+                              nb_hands=ec_instance.nb_hands,
+                              balls=ec_instance.balls,
+                              rows=[ec_instance.rows[i]
+                                    for i in selected_rows if selected_rows[i] == 1.0])
 
 # ============================================================================ #
 #                                                                              #
