@@ -1,4 +1,4 @@
-from recordclass import RecordClass
+from recordclass import StructClass
 from typing import List, Dict, Tuple, Union, Set
 from sage.all import MixedIntegerLinearProgram
 
@@ -11,23 +11,16 @@ from pylatex.utils import NoEscape
 #            (12, "ré"), (13, "do")]
 
 
-class Throw(RecordClass):
+class Throw(StructClass):
     ball: str
     time: int
     max_height: int
 
-    def __eq__(self, other):
-        return type(other) == Throw and self.ball == other.ball \
-            and self.time == other.time and self.max_height == other.max_height
-
-    def __str__(self):
-        return "T({}, {}, {})".format(self.ball, self.time, self.max_height)
-
     def __hash__(self):
-        return hash((self.ball, self.time, self.max_height))
+        return hash(str(self))
 
     def latex(self):
-        return self.__str__()
+        return r"T({}, {}, {})".format(self.time, self.ball, self.max_height)
 
 
 def music_to_throws(music: List[Tuple[int, str]]) \
@@ -51,21 +44,13 @@ def music_to_throws(music: List[Tuple[int, str]]) \
     return notes, throws
 
 
-class XItem(RecordClass):
+class XItem(StructClass):
     throw: Throw
     hand: int
     flying_time: int
 
-    def __eq__(self, other):
-        return type(other) == XItem and self.throw == other.throw \
-            and self.hand == other.hand \
-            and self.flying_time == other.flying_time
-
-    def __str__(self):
-        return "X({}, {}, {})".format(self.throw, self.hand, self.flying_time)
-
     def __hash__(self):
-        return hash((self.throw, self.hand, self.flying_time))
+        return hash(str(self))
 
     def latex(self):
         return r"x_{}^{}".format("{" + str(self.throw) + "}",
@@ -73,56 +58,35 @@ class XItem(RecordClass):
                                  + str(self.flying_time) + "}")
 
 
-class LItem(RecordClass):
+class LItem(StructClass):
     throw: Throw
 
-    def __eq__(self, other):
-        return type(other) == LItem and self.throw == other.throw
-
-    def __str__(self):
-        return "L({})".format(self.throw)
-
     def __hash__(self):
-        return hash((self.throw))
+        return hash(str(self))
 
     def latex(self):
         return r"l_{}".format("{" + str(self.throw) + "}")
 
 
-class WItem(RecordClass):
+class WItem(StructClass):
     time: int
     hand: int
 
-    def __eq__(self, other):
-        return type(other) == WItem and self.time == other.time \
-            and self.hand == other.hand
-
-    def __str__(self):
-        return "W({}, {})".format(self.time, self.hand)
-
     def __hash__(self):
-        return hash((self.time, self.hand))
+        return hash(str(self))
 
     def latex(self):
         return r"w_{}".format("{" + str(self.time) + ", "
                               + str(self.hand) + "}")
 
 
-class IItem(RecordClass):
+class IItem(StructClass):
     time: int
     hand: int
     flying_time: int
 
-    def __eq__(self, other):
-        return type(other) == IItem and self.time == other.time \
-            and self.hand == other.hand \
-            and self.flying_time == other.flying_time
-
-    def __str__(self):
-        return "I({}, {}, {})".format(self.time, self.hand, self.flying_time)
-
     def __hash__(self):
-        return hash((self.time, self.hand, self.flying_time))
+        return hash(str(self))
 
     def latex(self):
         return r"i_{}".format("{" + str(self.time) + ", "
@@ -130,20 +94,13 @@ class IItem(RecordClass):
                               + str(self.flying_time) + "}")
 
 
-class MItem(RecordClass):
+class MItem(StructClass):
     time: int
     hand: int
     multiplex: Tuple[int, ]
 
-    def __eq__(self, other):
-        return type(other) == MItem and self.time == other.time \
-            and self.hand == other.hand and self.multiplex == other.multiplex
-
-    def __str__(self):
-        return "M({}, {}, {})".format(self.time, self.hand, self.multiplex)
-
     def __hash__(self):
-        return hash((self.time, self.hand, self.multiplex))
+        return hash(str(self))
 
     def latex(self):
         return r"m_{}".format("{" + str(self.time) + ", "
@@ -151,7 +108,19 @@ class MItem(RecordClass):
                               + str(self.multiplex) + "}")
 
 
-class ExactCoverInstance(RecordClass):
+class DItem(StructClass):
+    time: int
+    hand: int
+
+    def __hash__(self):
+        return hash(str(self))
+
+    def latex(self):
+        return r"D_{}^{}".format("{" + str(self.time) + "}",
+                                 "{" + str(self.hand) + "}")
+
+
+class ExactCoverInstance(StructClass):
     x_items: List[XItem] = []
     l_items: List[LItem] = []
     w_items: List[WItem] = []
