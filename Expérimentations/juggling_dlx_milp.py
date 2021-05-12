@@ -305,6 +305,75 @@ def solve_exact_cover_with_milp(ec_instance: ExactCoverInstance) -> ExactCoverSo
                               rows=[ec_instance.rows[i]
                                     for i in selected_rows if selected_rows[i] == 1.0])
 
+
+# ============================================================================ #
+#                                                                              #
+#     FONCTIONS DE D'AFFICHAGE EN TEXTE DE LA SÉQUENCE DE JONGLAGE OBTENUE     #
+#                    EN RESULTAT DE L'ALGORITHME                               #
+#                                                                              #
+# ============================================================================ #
+
+
+def print_juggling_solution(sol):
+    for row in sol.rows:
+        for item in row:
+            if isinstance(item, XItem):
+                print("{} - {} : main {} ({} temps) --> {} temps"
+                      .format(str(item.throw.time), item.throw.ball, item.hand,
+                              item.throw.max_height - item.flying_time,
+                              item.flying_time))
+
+
+def print_juggling(sol):
+    in_hand: List[List[Set[str]]] = [[set() for h in range(sol.nb_hands)]
+                                     for t in range(sol.max_time + 1)]
+    hand: List[Dict[str, int]] = [{} for t in range(sol.max_time + 1)]
+    throws: List[List[Tuple[str, int]]] = [[] for t in range(sol.max_time + 1)]
+
+    for row in sol.rows:
+        for item in row:
+            if isinstance(item, XItem):
+                for t in range(item.throw.max_height - item.flying_time + 1):
+                    in_hand[item.throw.time + t][item.hand].add(item.throw.ball)
+                    hand[item.throw.time + t][item.throw.ball] = item.hand
+    for row in sol.rows:
+        for item in row:
+            if isinstance(item, XItem):
+                throws[item.throw.time + item.throw.max_height - item.flying_time] \
+                    .append((item.throw.ball, item.flying_time))
+    max_hand_width = [0 for i in range(sol.nb_hands)]
+    for t in range(sol.max_time):
+        for i in range(sol.nb_hands):
+            h = in_hand[t][i]
+            s = (str(h) if len(h) > 0 else "{}") + " "
+            if len(s) > max_hand_width[i]:
+                max_hand_width[i] = len(s)
+    max_hands_width = sum(max_hand_width)
+    for t in range(sol.max_time):
+        s = ""
+        for i in range(sol.nb_hands):
+            h = in_hand[t][i]
+            s1 = (str(h) if len(h) > 0 else "{}") + " "
+            s += ("{:^" + str(max_hand_width[i]) + "}").format(s1)
+        s += ": "
+        if len(throws[t]) > 0:
+            ball, flying_time = throws[t][0]
+            s += "{} -- {} --> {}" \
+                 .format(ball, flying_time,
+                         hand[t + flying_time][ball]
+                         if ball in hand[t + flying_time] else "?")
+            print(s)
+            for i in range(1, len(throws[t])):
+                ball, flying_time = throws[t][i]
+                print(" " * (max_hands_width + 2), end="")
+                print("{} -- {} --> {}"
+                      .format(ball, flying_time,
+                              hand[t + flying_time][ball]
+                              if ball in hand[t + flying_time] else "?"))
+        else:
+            print(s)
+
+
 # ============================================================================ #
 #                                                                              #
 # FONCTIONS DE GÉNÉRATION DE LATEX POUR AFFICHER LA TABLE ENTIÈRE REPRÉSENTANT #
