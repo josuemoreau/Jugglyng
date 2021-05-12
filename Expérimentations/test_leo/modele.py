@@ -8,9 +8,9 @@ throws (currently periodic with single throw at each step), and
 generates the sequence of states.
 
 The view then interpolates between the states, adding the geometric
-information
-
+information and managing sound.
 """
+
 import copy
 import collections
 from pygame import mixer
@@ -35,23 +35,10 @@ class Ball(RecordClass):
     just_landed : bool = False
     is_flying : bool = False
 
-"""
-def copy_ball(ball):
-    b = Ball(name=ball.name,
-             color=ball.color,
-             tone=ball.tone,
-             source_hand=ball.source_hand,
-             target_hand=ball.target_hand,
-             time_flying=ball.time_flying,
-             time_to_land=ball.time_to_land,
-             number=ball.number,
-             last_time_played=ball.last_time_played)
-    return b"""
-
 State=collections.namedtuple('State',
                              ['hands', 'balls'])
 Throw=collections.namedtuple('Throw',
-                             ['ball_number', 'source_hand', 'target_hand', 'duration'])
+                             ['ball_name', 'source_hand', 'target_hand', 'duration'])
 
 class Model:
 
@@ -81,8 +68,7 @@ class Model:
         """balls : List[Ball] = []
         hands : List[List[Optional[int]]] = []"""
 
-        balls = []
-        balls_dict = dict()
+        balls = dict()
         nb_hands = len(pattern)
         nb_steps = len(pattern[0]) #Pattern vide ?
         hands = [[] for i in range(nb_hands)]
@@ -92,7 +78,7 @@ class Model:
         #SOURCE HAND ? TARGET HAND ?
         #Pour l'instant, on ne peut pas mettre de balle inutilisée dans une main,
         #et on doit spécifier toutes les mains utilisées dans le pattern.
-        for ball_number, ball_prop in enumerate(ball_properties):
+        for number, ball_prop in enumerate(ball_properties):
             if "tone" in ball_prop:
                 tone = "../../sounds/{}.wav".format(ball_prop["tone"])
             else:
@@ -102,15 +88,13 @@ class Model:
             else:
                 color = None
             name = ball_prop["name"]
-            number = len(balls)
             ball : Ball = Ball(name   = name,
                                color  = color,
                                tone   = tone,
-                               number = len(balls))
-            balls.append(ball)
-            balls_dict[name] = ball_number
+                               number = number)
+            balls[name] = ball
         
-        #Copie et modifie le pattern pour le rendre compatible avec les numéros de balle
+        """#Copie et modifie le pattern pour le rendre compatible avec les numéros de balle
         pattern2 = []
         for hand_pattern in pattern:
             hand2 = []
@@ -121,36 +105,35 @@ class Model:
                 hand2.append(step2)
             pattern2.append(hand2)
         
-        pattern = pattern2
+        pattern = pattern2"""
 
         #Parcours tout le pattern pour savoir où sont initialement les balles
-        placed = [False]*len(balls)
+        placed = {name : False for name in balls}
         for step in range(nb_steps):
-            if all(placed):
+            if all(placed.values()):
                 break
             balls_added_this_step = set()
             for hand in range(nb_hands):
-                for ball_number, target, duration in pattern[hand][step]:
-                    if not placed[ball_number]:
-                        placed[ball_number] = True
-                        balls_added_this_step.add(ball_number)
-                        ball = balls[ball_number]
+                for ball_name, target, duration in pattern[hand][step]:
+                    if not placed[ball_name]:
+                        placed[ball_name] = True
+                        balls_added_this_step.add(ball_name)
+                        ball = balls[ball_name]
                         ball.source_hand = hand
-                        hands[hand].append(ball.number)
-                    elif ball_number in balls_added_this_step:
+                        hands[hand].append(ball.name)
+                    elif ball_name in balls_added_this_step:
                         raise Exception("La balle {} est présente initialement dans 2 mains.".format(ball_name))
         
-        for ball_number, elem in enumerate(placed):
+        #Si une balle n'est pas déclarée dans le pattern, elle est par défaut placée dans la main 0.
+        for ball_name, elem in placed.items():
             if not elem:
-                ball = balls[ball_number]
+                ball = balls[ball_name]
                 ball.source_hand = 0
-                hands[0].append(ball.number)
+                hands[0].append(ball.name)
 
-        ballst : Tuple[Ball, ...]                = tuple(balls)
         handst : Tuple[List[Optional[int]], ...] = tuple(hands)
-        self.balls = ballst
+        self.balls = balls
         self.states = [State(balls=balls, hands=handst)]
-        self.balls_dict = balls_dict
         self.nb_hands = len(handst)
         self.pattern = pattern
         self.pattern_len = len(pattern[0])
@@ -160,19 +143,19 @@ class Model:
             return []
         throws = []
         for hand in range(self.nb_hands):
-            for ball_number, target, duration in self.pattern[hand][step]:
-                throw = Throw(ball_number = ball_number,
+            for ball_name, target, duration in self.pattern[hand][step]:
+                throw = Throw(ball_name = ball_name,
                               source_hand = hand,
                               target_hand = target,
                               duration = duration)
                 throws.append(throw)
         return throws
 
-    def transition(self, state : State, throws : List[Throw]):
+    def transition(self, state : State, throws : List[Throw], step : int):
         hands = copy.deepcopy(state.hands)
         balls = copy.deepcopy(state.balls)
         #balls = tuple([copy_ball(x) for x in state.balls])
-        for b in balls:
+        for b in balls.values():
             b.just_landed = False
             if b.time_to_land > 1:   # flying ball
                 b.time_to_land -= 1
@@ -184,16 +167,16 @@ class Model:
                 b.time_flying = 0
                 b.source_hand = b.target_hand
                 b.target_hand = None
-                hands[b.source_hand].append(b.number)
+                hands[b.source_hand].append(b.name)
         for throw in throws:
-            if throw.ball_number in hands[throw.source_hand]:
-                ball = balls[throw.ball_number]
+            if throw.ball_name in hands[throw.source_hand]:
+                ball = balls[throw.ball_name]
                 hand = hands[throw.source_hand]
-                hand.pop(ball.number)
+                hand.remove(ball.name)
                 if throw.duration == 0: #téléportation !
                     ball.just_landed = True
                     ball.source_hand = throw.target_hand
-                    hands[ball.source_hand].append(ball.number)
+                    hands[ball.source_hand].append(ball.name)
                 else:
                     ball.source_hand = throw.source_hand
                     ball.target_hand = throw.target_hand
@@ -201,12 +184,12 @@ class Model:
                     ball.time_to_land = throw.duration
                     ball.is_flying = True
             else:
-                print("Balle {} n'est pas dans la main {} à l'étape {}".format(balls[ball_number].name, throw.source_hand, t))
+                raise Exception("Balle {} n'est pas dans la main {} à l'étape {}".format(throw.ball_name, throw.source_hand, step))
         return State(balls=balls, hands=hands)
 
     def state(self, t : int):
         for t1 in range(len(self.states)-1, t):
-            self.states.append(self.transition(self.states[-1], self.get_throws(t1)))
+            self.states.append(self.transition(self.states[-1], self.get_throws(t1), t1))
         return self.states[t]
 
 class BallView:
@@ -220,7 +203,7 @@ class BallView:
 
 class HandView:
     def __init__(self, x : int =  0, y    : int = 0, z     : int = -30, 
-                       r : int = 10, side : int = 1, phase : int =   0):
+                       r : int = 5, side : int = 1, phase : int =   0):
         self.x : int = x
         self.y : int = y
         self.z : int = z
@@ -233,19 +216,19 @@ class HandView:
         )
 
 class View:
-    height_constant = 7
+    height_constant = 4
 
-    def __init__(self, model : Model, slider_step : float):
+    def __init__(self, model : Model):
 
         self.model : Model = model
 
-        mixer.init()
-        mixer.set_num_channels(len(model.balls))
+        """mixer.init()
+        mixer.set_num_channels(len(model.balls))"""
 
-        self.time_in_hand = 0.0
+        self.time_in_hand = 0.5
         initial_state = self.model.state(0)
-        self.balls : List[BallView] = [BallView(ball)
-                                       for ball in initial_state.balls]
+        self.balls : List[BallView] = {name : BallView(ball)
+                                       for name, ball in initial_state.balls.items()}
         self.hands : List[HandView] = [HandView(x=25*hand)
                                        for hand in range(self.model.nb_hands)]
 
@@ -254,7 +237,7 @@ class View:
         hands_midpoint = 25*(self.model.nb_hands)
         camera = PerspectiveCamera(position=[0, 0, -100], up = [0,1,0], aspect=width/height)
 
-        objects = [object.mesh for object in self.hands] + [object.mesh for object in self.balls]
+        objects = [object.mesh for object in self.hands] + [object.mesh for object in self.balls.values()]
         scene   = Scene(children= objects + [camera, AmbientLight()])
         self.widget = Renderer(scene=scene,
                                camera=camera,
@@ -280,15 +263,14 @@ class View:
             x, z, y = self.hand_position(view, t)
             view.mesh.position = x, z-4, y
 
-        for ball in state.balls:
+        for ball in state.balls.values():
 
             #On cherche la balle correspondante dans View pour lui faire jouer un son si besoin
-            view_ball = self.balls[ball.number]
+            view_ball = self.balls[ball.name]
 
             if view_ball.tone is not None:
                 #if ball.just_landed and (old_t < step <= t or old_t > step >= t):
                 if ball.just_landed and old_t < step <= t:
-                    print(ball.source_hand)
                     view_ball.tone.play()
 
             #On actualise la position de la balle
@@ -306,13 +288,7 @@ class View:
             else:
                 x, z, y = self.hand_position(self.hands[ball.source_hand], t) # type: ignore
 
-            self.balls[ball.number].mesh.position = x, z, y
-            
+            #A little offset between balls to differentiate them (linear between +1 and -1 offset)
+            x += 1 - 2*(ball.number/len(self.balls))
 
-"""Pour ce qui est du son.
-Dans Model, on calcule à quel moment le son de réception est censé être joué.
-(Normal, vu que l'état des balles dépend de chaque instant t)
-En revanche, c'est depuis View que le son est joué.
-(Puisque les balles sont uniques, quelque soit l'instant, on peut donc savoir si un
-son est déjà en train d'être joué, et s'il faut l'interrompre ou non)
-"""
+            self.balls[ball.name].mesh.position = x, z, y
