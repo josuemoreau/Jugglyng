@@ -78,6 +78,7 @@ class Model:
         #SOURCE HAND ? TARGET HAND ?
         #Pour l'instant, on ne peut pas mettre de balle inutilisée dans une main,
         #et on doit spécifier toutes les mains utilisées dans le pattern.
+
         for number, ball_prop in enumerate(ball_properties):
             if "tone" in ball_prop:
                 tone = "../../sounds/{}.wav".format(ball_prop["tone"])
@@ -202,7 +203,8 @@ class BallView:
         self.tone = Audio(ball.tone)
 
 class HandView:
-    def __init__(self, x : int =  0, y    : int = 0, z     : int = -30, 
+    def __init__(self, id: int, throw_times: List[int],
+                       x : int =  0, y    : int = 0, z     : int = -30,
                        r : int = 5, side : int = 1, phase : int =   0):
         self.x : int = x
         self.y : int = y
@@ -214,11 +216,25 @@ class HandView:
             SphereBufferGeometry(4, 32, 16),
             MeshStandardMaterial(color="white")
         )
+        self.id: int = id
+        self.throw_times: List[int] = throw_times
+        # Variables d'animation
+        self.animation: bool = False
+        self.animation_time: float = 0.0
+        self.last_time: float = 0.0
+
+    def land_position(self):
+        alpha = pi - pi * (0.90 + self.phase)
+        return self.x + self.side * self.r * cos(alpha), self.z + self.r * sin(alpha), self.y
+
+    def throw_position(self):
+        alpha = pi * (0.80 + self.phase)
+        return self.x + self.side * self.r * cos(alpha), self.z + self.r * sin(alpha), self.y
 
 class View:
     height_constant = 4
 
-    def __init__(self, model : Model):
+    def __init__(self, model : Model, sides: List[int]):
 
         self.model : Model = model
 
@@ -229,8 +245,15 @@ class View:
         initial_state = self.model.state(0)
         self.balls : List[BallView] = {name : BallView(ball)
                                        for name, ball in initial_state.balls.items()}
-        self.hands : List[HandView] = [HandView(x=25*hand)
-                                       for hand in range(self.model.nb_hands)]
+
+        # Création des vues des mains
+        self.hands : List[HandView] = []
+        for hand in range(self.model.nb_hands):
+            throws = self.model.pattern[hand]
+            throw_times = [t + 1 for t in range(len(throws)) if len(throws[t]) > 0]
+            hview = HandView(x=25*hand, id=hand,
+                             throw_times=throw_times, side=sides[hand])
+            self.hands.append(hview)
 
         width=500
         height=500
@@ -249,8 +272,24 @@ class View:
         )
         self.update(0, 0)
 
-    def hand_position(self, hand : HandView, t : float):
-        alpha = pi * (t + hand.phase)
+    def hand_position(self, hand : HandView, t : float, balls: List[Ball]):
+        alpha = 0  # Sans lancer, les mains ne bougent pas
+        # Suite d'une animation déjà lancée
+        if hand.animation:
+            dt = t - hand.last_time
+            hand.animation_time += 2 * dt
+            hand.last_time = t
+            if hand.animation_time >= 2.0:
+                hand.animation = False
+                hand.last_time = 0
+            else:
+                alpha = pi * (hand.animation_time + hand.phase)
+        if alpha == 0 and int(t) + 1 in hand.throw_times \
+           and t - int(t) >= 0.9 and not hand.animation:
+            hand.animation = True
+            hand.animation_time = 0
+            hand.last_time = t
+            alpha = pi * (hand.animation_time + hand.phase)
         return hand.x+hand.side*hand.r*cos(alpha), hand.z-hand.r*sin(alpha), hand.y
 
     def update(self, t : float, old_t : float):
@@ -258,12 +297,13 @@ class View:
         old_t : float = change["old"]"""
         step  = int(t)
         state = self.model.state(step)
-        
+        balls = list(state.balls.values())
+
         for hand, view in zip(state.hands, self.hands):
-            x, z, y = self.hand_position(view, t)
+            x, z, y = self.hand_position(view, t, balls)
             view.mesh.position = x, z-4, y
 
-        for ball in state.balls.values():
+        for ball in balls:
 
             #On cherche la balle correspondante dans View pour lui faire jouer un son si besoin
             view_ball = self.balls[ball.name]
@@ -278,15 +318,15 @@ class View:
             if ball.is_flying and ball.time_flying + (t - step) - self.time_in_hand > 0:
                 throw_time = step - ball.time_flying + self.time_in_hand
                 catch_time = step + ball.time_to_land
-                x0,z0,y0 = self.hand_position(self.hands[ball.source_hand], throw_time)  # type: ignore
-                x1,z1,y1 = self.hand_position(self.hands[ball.target_hand], catch_time) # type: ignore
+                x0, z0, y0 = self.hands[ball.source_hand].throw_position()
+                x1, z1, y1 = self.hands[ball.target_hand].land_position()
                 a = (t - throw_time) / (catch_time - throw_time)
                 h = self.height_constant * (ball.time_flying + ball.time_to_land)**2 #throw height
                 x = x0 * (1-a) + x1 * a
                 y = y0 * (1-a) + y1 * a
                 z = z0 * (1-a) + z1 * a + h * 4*a*(1-a)
             else:
-                x, z, y = self.hand_position(self.hands[ball.source_hand], t) # type: ignore
+                x, z, y = self.hand_position(self.hands[ball.source_hand], t, balls) # type: ignore
 
             #A little offset between balls to differentiate them (linear between +1 and -1 offset)
             x += 1 - 2*(ball.number/len(self.balls))
