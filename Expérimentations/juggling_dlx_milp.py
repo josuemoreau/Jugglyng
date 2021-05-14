@@ -242,8 +242,10 @@ def throws_to_extended_exact_cover(balls: Set[str], throws: List[List[Throw]],
                               balls=balls)
 
 
-def solve_exact_cover_with_milp(ec_instance: ExactCoverInstance) -> ExactCoverSolution:
-    p = MixedIntegerLinearProgram()
+def solve_exact_cover_with_milp(ec_instance: ExactCoverInstance,
+                                optimize: bool = False) \
+        -> ExactCoverSolution:
+    p = MixedIntegerLinearProgram(maximization=False)
 
     # Calcul, pour chaque colonne, des lignes qui ont un élément dans cette
     # colonne
@@ -255,6 +257,10 @@ def solve_exact_cover_with_milp(ec_instance: ExactCoverInstance) -> ExactCoverSo
         row = ec_instance.rows[i]
         for item in row:
             d[item].append(i)
+
+    # Dictionnaire pour stocker les expressions permettant de calculer les
+    # variables D(t, m)
+    d_expr = {}
 
     # Génération de l'instance de MILP
     x = p.new_variable(binary=True)
@@ -291,9 +297,24 @@ def solve_exact_cover_with_milp(ec_instance: ExactCoverInstance) -> ExactCoverSo
     for item in ec_instance.d_items:
         if len(d[item]) > 0:
             rows_vars = [x[i] for i in d[item]]
+            dvar = sum(rows_vars)
+            d_expr[(item.time, item.hand)] = dvar
             p.add_constraint(ec_instance.d_items_bounds[0]
-                             <= sum(rows_vars)
+                             <= dvar
                              <= ec_instance.d_items_bounds[1])
+        else:
+            dvar = 0
+            d_expr[(item.time, item.hand)] = dvar
+
+    if optimize:
+        a = p.new_variable(binary=True)
+        for t in range(ec_instance.max_time + 1):
+            sum_dvar = 0
+            for h in range(ec_instance.nb_hands):
+                dvar = d_expr[(t, h)]
+                sum_dvar += dvar
+            p.add_constraint(a[t] >= (sum_dvar - 1) / ec_instance.nb_hands)
+        p.set_objective(sum([a[t] for t in range(ec_instance.max_time + 1)]))
 
     # Résolution
     p.solve()
