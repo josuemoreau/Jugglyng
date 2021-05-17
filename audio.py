@@ -6,7 +6,7 @@ import jp_proxy_widget
 class Audio():
     def __init__(self, filename):
         self.widget = jp_proxy_widget.JSProxyWidget()
-        self.js = "../../howler.js"
+        self.js = "howler.js"
 
         self.widget.load_js_files([self.js])
 
