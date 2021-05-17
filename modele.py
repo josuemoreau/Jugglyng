@@ -80,7 +80,6 @@ class Model:
             for color in content:
                 if isinstance(color, dict):
                     tone = Audio(color["tone"] + ".wav")
-                    tone.display()
                     color = color["color"]
                 else:
                     tone = None

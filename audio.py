@@ -24,7 +24,6 @@ class Audio():
             });
             """, url=self.url)
 
-    def display(self):
         display(self.widget)
 
     def play(self):
