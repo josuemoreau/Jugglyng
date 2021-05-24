@@ -1,0 +1,1 @@
+[{"name": "red", "lower_hsv": [0, 111, 125], "higher_hsv": [7, 184, 255], "data": {}}, {"name": "yellow", "lower_hsv": [17, 75, 145], "higher_hsv": [38, 149, 207], "data": {}}, {"name": "blue", "lower_hsv": [95, 46, 55], "higher_hsv": [119, 207, 194], "data": {}}]
