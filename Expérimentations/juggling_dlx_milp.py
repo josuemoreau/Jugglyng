@@ -327,6 +327,32 @@ def solve_exact_cover_with_milp(ec_instance: ExactCoverInstance,
                                     for i in selected_rows if selected_rows[i] == 1.0])
 
 
+def juggling_sol_to_simulator(sol):
+    hand: List[Dict[str, int]] = [{} for t in range(sol.max_time + 1)]
+    throws: List[List[List[Tuple(str, int, int)]]] = \
+        [[[] for t in range(sol.max_time + 1)] for h in range(sol.nb_hands)]
+
+    for row in sol.rows:
+        for item in row:
+            if isinstance(item, XItem):
+                for t in range(item.throw.max_height - item.flying_time + 1):
+                    hand[item.throw.time + t][item.throw.ball] = item.hand
+    for row in sol.rows:
+        for item in row:
+            if isinstance(item, XItem):
+                ball = item.throw.ball
+                land_time = item.throw.time + item.throw.max_height
+                throw_time = land_time - item.flying_time
+                src_hand = item.hand
+                dst_hand = \
+                    hand[land_time][ball] if ball in hand[land_time] else 0
+                throws[src_hand][throw_time] \
+                    .append((ball,
+                             dst_hand,
+                             item.flying_time))
+    return throws
+
+
 # ============================================================================ #
 #                                                                              #
 #     FONCTIONS DE D'AFFICHAGE EN TEXTE DE LA SÉQUENCE DE JONGLAGE OBTENUE     #
