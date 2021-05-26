@@ -120,6 +120,19 @@ class DItem(StructClass):
                                  "{" + str(self.hand) + "}")
 
 
+class UItem(StructClass):
+    ball: str
+    time: int
+    hand: int
+
+    def __hash__(self):
+        return hash(str(self))
+
+    def latex(self):
+        return r"U_{}^{}".format("{" + self.ball + ", " + str(self.time) + "}",
+                                 "{" + str(self.hand) + "}")
+
+
 class ExactCoverInstance(StructClass):
     max_time: int = 0
     nb_hands: int = 1
@@ -131,6 +144,7 @@ class ExactCoverInstance(StructClass):
     i_items: List[IItem] = []
     m_items: List[MItem] = []
     d_items: List[DItem] = []
+    u_items: List[UItem] = []
 
     x_items_bounds: Tuple[int, int] = (0, 1)
     l_items_bounds: Tuple[int, int] = (1, 1)
@@ -138,8 +152,9 @@ class ExactCoverInstance(StructClass):
     i_items_bounds: Tuple[int, int] = (0, 1)
     m_items_bounds: Tuple[int, int] = (0, 1)
     d_items_bounds: Tuple[int, int] = (0, 1)
+    u_items_bounds: Tuple[int, int] = (0, 1)
 
-    rows: List[List[Union[XItem, LItem, WItem, IItem, MItem, DItem]]] = []
+    rows: List[List[Union[XItem, LItem, WItem, IItem, MItem, DItem, UItem]]] = []
 
 
 class ExactCoverSolution(StructClass):
@@ -147,7 +162,7 @@ class ExactCoverSolution(StructClass):
     nb_hands: int = 1
     balls: Set[str] = set()
 
-    rows: List[List[Union[XItem, LItem, WItem, IItem, MItem, DItem]]] = []
+    rows: List[List[Union[XItem, LItem, WItem, IItem, MItem, DItem, UItem]]] = []
 
 
 def throws_to_extended_exact_cover(balls: Set[str], throws: List[List[Throw]],
@@ -163,6 +178,7 @@ def throws_to_extended_exact_cover(balls: Set[str], throws: List[List[Throw]],
     i_items = {}
     m_items = {}
     d_items = {}
+    u_items = {}
     fmultiplex: Dict[int, List[Tuple[int, ]]] = {i: [] for i in range(1, H + 1)}
     f2seqs: Dict[int, List[int]] = {i: [] for i in range(1, H + 1)}
     rows = []
@@ -182,17 +198,17 @@ def throws_to_extended_exact_cover(balls: Set[str], throws: List[List[Throw]],
                     max_height = throw.max_height
             if t + max_height > max_time:
                 max_time = t + max_height
-    # Génération des items x et I
+    # Génération des items x et L
     for t in range(len(throws)):
         for throw in throws[t]:
-            u = LItem(throw=throw)
-            l_items[throw] = u
+            v = LItem(throw=throw)
+            l_items[throw] = v
 
             for hand in range(nb_hands):
                 for flying_time in range(1, min(H, throw.max_height) + 1):
                     x = XItem(throw=throw, hand=hand, flying_time=flying_time)
                     x_items[(throw, hand, flying_time)] = x
-    # Génération des items w, M et D
+    # Génération des items w, M, D et U
     for t in range(max_time + 1):
         for hand in range(nb_hands):
             w = WItem(time=t, hand=hand)
@@ -204,6 +220,10 @@ def throws_to_extended_exact_cover(balls: Set[str], throws: List[List[Throw]],
             for f in forbidden_multiplex:
                 m = MItem(time=t, hand=hand, multiplex=f)
                 m_items[(t, hand, f)] = m
+
+            for ball in balls:
+                u = UItem(ball=ball, time=t, hand=hand)
+                u_items[(ball, t, hand)] = u
     # Génération des items I
     for t in range(max_time + 1):
         for hand in range(nb_hands):
@@ -227,6 +247,11 @@ def throws_to_extended_exact_cover(balls: Set[str], throws: List[List[Throw]],
                         row.append(i_items[(t + 1, hand, fnext)])
                     for t1 in range(t, t + throw.max_height - flying_time + 1):
                         row.append(w_items[(t1, hand)])
+                    row.append(u_items[(throw.ball, throw.time, hand)])
+                    if flying_time == 1:
+                        row.append(u_items[(throw.ball,
+                                            throw.time + throw.max_height,
+                                            hand)])
                     rows.append(row)
 
     return ExactCoverInstance(x_items=list(x_items.values()),
@@ -235,6 +260,7 @@ def throws_to_extended_exact_cover(balls: Set[str], throws: List[List[Throw]],
                               i_items=list(i_items.values()),
                               m_items=list(m_items.values()),
                               d_items=list(d_items.values()),
+                              u_items=list(u_items.values()),
                               w_items_bounds=(0, K),
                               rows=rows,
                               max_time=max_time,
@@ -249,10 +275,11 @@ def solve_exact_cover_with_milp(ec_instance: ExactCoverInstance,
 
     # Calcul, pour chaque colonne, des lignes qui ont un élément dans cette
     # colonne
-    d: Dict[Union[XItem, LItem, WItem, IItem, MItem, DItem], List[int]] \
+    d: Dict[Union[XItem, LItem, WItem, IItem, MItem, DItem, UItem], List[int]] \
         = {item: [] for item in ec_instance.x_items + ec_instance.l_items
             + ec_instance.w_items + ec_instance.i_items
-            + ec_instance.m_items + ec_instance.d_items}
+            + ec_instance.m_items + ec_instance.d_items
+            + ec_instance.u_items}
     for i in range(len(ec_instance.rows)):
         row = ec_instance.rows[i]
         for item in row:
@@ -305,6 +332,12 @@ def solve_exact_cover_with_milp(ec_instance: ExactCoverInstance,
         else:
             dvar = 0
             d_expr[(item.time, item.hand)] = dvar
+    for item in ec_instance.u_items:
+        if len(d[item]) > 0:
+            row_vars = [x[i] for i in d[item]]
+            p.add_constraint(ec_instance.u_items_bounds[0]
+                             <= sum(row_vars)
+                             <= ec_instance.u_items_bounds[1])
 
     if optimize:
         a = p.new_variable(binary=True)
@@ -345,7 +378,7 @@ def juggling_sol_to_simulator(sol):
                 throw_time = land_time - item.flying_time
                 src_hand = item.hand
                 dst_hand = \
-                    hand[land_time][ball] if ball in hand[land_time] else 0
+                    hand[land_time][ball] if ball in hand[land_time] else 1 - src_hand
                 throws[src_hand][throw_time] \
                     .append((ball,
                              dst_hand,
