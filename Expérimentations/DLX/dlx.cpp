@@ -43,7 +43,7 @@ struct Node {
 class DLX {
     public:
         DLX(vector<void*> items, vector<vector<void*>> rows);
-        void print_table();
+        void print_table(function<void(void*)> pp);
         void all_solutions(function<void(void*)> pp);
         void print_solution(vector<INT> sol, function<void(void*)> pp);
 
@@ -172,17 +172,18 @@ INT DLX::choose() {
     return i;
 }
 
-void DLX::print_table() {
+void DLX::print_table(function<void(void*)> pp) {
     for (auto& item : this->items) {
         if (item.name == nullptr) {
             cout << "Item(Null, "
                  << item.llink << ", "
                  << item.rlink << ")" << endl;
         } else {
-            cout << "Item(" 
-                << *(string*)item.name << ", "
-                << item.llink << ", "
-                << item.rlink << ")" << endl;
+            cout << "Item(";
+            pp(item.name);
+            cout << ", "
+                 << item.llink << ", "
+                 << item.rlink << ")" << endl;
         }
     }
 
@@ -299,11 +300,11 @@ int main(int argc, char** argv) {
 
     DLX x(items, rows);
 
-    x.print_table();
-
     auto pp_string_lambda = [](void* s) {
         cout << *((string*)s);
     };
+
+    x.print_table(pp_string_lambda);
 
     x.all_solutions(pp_string_lambda);
 
