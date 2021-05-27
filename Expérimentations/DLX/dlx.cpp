@@ -1,3 +1,11 @@
+/**
+ * Implémentation de l'algorithme X
+ * --------------------------------
+ * 
+ * La description de l'algorithme se trouve dans
+ * The Art of Computer Programming, Volume 4, Fascicule 5
+ */
+
 #include <iostream>
 #include <vector>
 #include <unordered_map>
@@ -165,8 +173,6 @@ INT DLX::choose() {
 }
 
 void DLX::print_table() {
-    // vector<Item>::iterator iit;
-    // for (iit = this->items.begin(); iit < this->items.end(); iit++) {
     for (auto& item : this->items) {
         if (item.name == nullptr) {
             cout << "Item(Null, "
@@ -180,9 +186,7 @@ void DLX::print_table() {
         }
     }
 
-    // vector<Node>::iterator oit;
     INT i = 0;
-    // for (oit = this->options.begin(); oit < this->options.end(); oit++, i++) {
     for (auto& option : this->options) {
         cout << i << " : " 
              << ((option.type == Header)?"Header":"Option") << "("
