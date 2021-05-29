@@ -64,7 +64,7 @@ class DLX {
             vector<tuple<vector<void*>, vector<tuple<void*, COLOR>>>> rows);
         void print_table(function<void(void*)> pp);
         void all_solutions(function<void(void*)> pp);
-        void print_solution(vector<INT> sol, function<void(void*)> pp);
+        void print_solution(vector<INT> sol, INT l, function<void(void*)> pp);
 
         void add_row(vector<void*> row_primary, 
                      vector<tuple<void*, COLOR>> row_secondary);
@@ -355,14 +355,23 @@ void DLX::print_table(function<void(void*)> pp) {
     }
 }
 
-void DLX::print_solution(vector<INT> sol, function<void(void*)> pp) {
+void DLX::print_solution(vector<INT> sol, INT l, function<void(void*)> pp) {
     vector<vector<tuple<void*, COLOR>>> rows;
     unordered_map<INT, COLOR> colors;
     COLOR color;
-    INT p, x;
+    INT p, x, i = 0;
 
     for (auto& opt_id : sol) {
-        if (opt_id == 0) break;
+        if (i >= l) break;
+
+        cout << opt_id << " ";
+        i++;
+    }
+    cout << endl;
+
+    i = 0;
+    for (auto& opt_id : sol) {
+        if (i >= l) break;
 
         x = this->options[opt_id].tl;
         color = this->options[opt_id].color;
@@ -387,6 +396,7 @@ void DLX::print_solution(vector<INT> sol, function<void(void*)> pp) {
             }
         }
         rows.push_back(row);
+        i++;
     }
 
     // print rows
@@ -408,19 +418,23 @@ void DLX::all_solutions(function<void(void*)> pp) {
     INT l = 0;
     INT i, p, j, q;
 
-    M2: if (this->items[0].rlink == 0) {
+    M2: // cout << "M2" << endl;
+        if (this->items[0].rlink == 0) {
             cout << "Found solution :" << endl;
-            this->print_solution(x, pp);
+            this->print_solution(x, l, pp);
             goto M9;
         }
-    M3: i = this->choose();
-        if (branch_degree(i)) goto M9;
-    M4: x[l] = this->options[i].dlink;
+    M3: // cout << "M3" << endl;
+        i = this->choose();
+        if (branch_degree(i) == 0) goto M9;
+    M4: // cout << "M4" << endl;
+        x[l] = this->options[i].dlink;
         this->items[i].bound--;
         if (this->items[i].bound == 0) this->cover(i);
         if (this->items[i].bound != 0 || this->items[i].slack != 0)
             ft[l] = x[l];
-    M5: if (this->items[i].bound == 0 && this->items[i].slack == 0) {
+    M5: // cout << "M5" << endl;
+        if (this->items[i].bound == 0 && this->items[i].slack == 0) {
             if (x[l] != i) goto M6;
             else goto M8;
         } else if (this->options[i].tl <= this->items[i].bound - this->items[i].slack) {
@@ -434,7 +448,8 @@ void DLX::all_solutions(function<void(void*)> pp) {
             this->items[p].rlink = q;
             this->items[q].llink = p;
         }
-    M6: if (x[l] != i) {
+    M6: // cout << "M6" << endl;
+        if (x[l] != i) {
             p = x[l] + 1;
             while (p != x[l]) {
                 j = this->options[p].tl;
@@ -451,7 +466,8 @@ void DLX::all_solutions(function<void(void*)> pp) {
             l++;
             goto M2;
         }
-    M7: if (x[l] != i) {
+    M7: // cout << "M7" << endl;
+        if (x[l] != i) {
             p = x[l] - 1;
             while (p != x[l]) {
                 j = this->options[p].tl;
@@ -468,12 +484,14 @@ void DLX::all_solutions(function<void(void*)> pp) {
             x[l] = this->options[x[l]].dlink;
             goto M5;
         }
-    M8: if (this->items[i].bound == 0 && this->items[i].slack == 0)
+    M8: // cout << "M8" << endl;
+        if (this->items[i].bound == 0 && this->items[i].slack == 0)
             this->uncover(i);
         else if (this->items[i].bound == 0) this->untweak_special(ft, l);
         else this->untweak(ft, l);
         this->items[i].bound++;
-    M9: if (l == 0) return;
+    M9: // cout << "M9" << endl;
+        if (l == 0) return;
         else {
             l--;
             if (x[l] <= this->nb_items) {
@@ -494,7 +512,7 @@ void pp_string(void* s) {
     cout << *((string*)s);
 }
 
-int main(int argc, char** argv) {
+void test1() {
     string *p = new string("p");
     string *q = new string("q");
     string *r = new string("r");
@@ -508,22 +526,72 @@ int main(int argc, char** argv) {
     };
     vector<void*> secondary = {x, y};
 
-    vector<tuple<vector<void*>, vector<tuple<void*, COLOR>>>> rows;
-
     DLX dlx(primary, secondary, {});
     dlx.add_row({p, q}, {make_tuple(x, EMPTY_COLOR), make_tuple(y, 1)});
     dlx.add_row({p, r}, {make_tuple(x, 1), make_tuple(y, EMPTY_COLOR)});
     dlx.add_row({p}, {make_tuple(x, 2)});
     dlx.add_row({q}, {make_tuple(x, 1)});
     dlx.add_row({r}, {make_tuple(y, 1)});
+    
+    dlx.print_table(pp_string);
 
+    dlx.all_solutions(pp_string);
+}
+
+void test2() {
+    string *p = new string("p");
+    string *q = new string("q");
+    string *r = new string("r");
+
+    vector<tuple<void*, INT, INT>> primary = {
+        make_tuple(p, 1, 1), 
+        make_tuple(q, 1, 1), 
+        make_tuple(r, 1, 1)
+    };
+
+    DLX dlx(primary, {}, {});
+    dlx.add_row({p, q}, {});
+    dlx.add_row({p, r}, {});
+    dlx.add_row({p}, {});
+    dlx.add_row({q}, {});
+    dlx.add_row({r}, {});
+
+    dlx.print_table(pp_string);
+
+    dlx.all_solutions(pp_string);
+}
+
+void test3() {
+    string *x = new string("x");
+
+    vector<tuple<void*, INT, INT>> primary = {
+        make_tuple(x, 0, 5)
+    };
+
+    DLX dlx(primary, {}, {});
+    dlx.add_row({x}, {});
+    dlx.add_row({x}, {});
+    dlx.add_row({x}, {});
+    dlx.add_row({x}, {});
+    dlx.add_row({x}, {});
+
+    dlx.print_table(pp_string);
+
+    dlx.all_solutions(pp_string);
+}
+
+int main(int argc, char** argv) {
     auto pp_string_lambda = [](void* s) {
         cout << *((string*)s);
     };
 
-    dlx.print_table(pp_string_lambda);
+    cout << "======== TEST 1 ========" << endl;
+    test1();
+    cout << "======== TEST 2 ========" << endl;
+    test2();
+    cout << "======== TEST 3 ========" << endl;
+    test3();
 
-    dlx.all_solutions(pp_string_lambda);
-
+ 
     return 0;
 }
