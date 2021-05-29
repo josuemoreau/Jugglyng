@@ -57,6 +57,19 @@ struct Node {
 #define branch_degree(p) monus(this->options[p].tl + 1, \
                                monus(this->items[p].bound, this->items[p].slack)) 
 
+/* Définition de macros pour que le code écrit ressemble au code de Knuth */
+#define DLINK(x) this->options[x].dlink
+#define ULINK(x) this->options[x].ulink
+#define TOP(x) this->options[x].tl
+#define LEN(x) this->options[x].tl
+#define CLR(x) this->options[x].color
+
+#define LLINK(x) this->items[x].rlink
+#define RLINK(x) this->items[x].llink
+#define NAME(x) this->items[x].name
+#define SLACK(x) this->items[x].slack
+#define BOUND(x) this->items[x].bound
+
 class DLX {
     public:
         DLX(vector<tuple<void*, INT, INT>> primary,
@@ -175,44 +188,44 @@ void DLX::add_row(vector<void*> row_primary,
 }
 
 void DLX::cover(INT i) {
-    INT p = this->options[i].dlink;
-    INT l = this->items[i].llink;
-    INT r = this->items[i].rlink;
+    INT p = DLINK(i);
     while (p != i) {
         this->hide(p);
-        p = this->options[p].dlink;
+        p = DLINK(p);
     }
-    this->items[l].rlink = r;
-    this->items[r].llink = l;
+    INT l = LLINK(i);
+    INT r = RLINK(i);
+    RLINK(l) = r;
+    LLINK(r) = l;
 }
 
 void DLX::hide(INT p) {
     INT q = p + 1;
     INT x, u, d;
     while (q != p) {
-        x = this->options[q].tl;
-        u = this->options[q].ulink;
-        d = this->options[q].dlink;
+        x = TOP(q);
+        u = ULINK(q);
+        d = DLINK(q);
         if (x <= 0) q = u;
-        else if (this->options[q].color == IGNORE_COLOR) q++;
+        else if (CLR(q) == IGNORE_COLOR) q++;
         else {
-            this->options[u].dlink = d;
-            this->options[d].ulink = u;
-            this->options[x].tl--;
+            DLINK(u) = d;
+            ULINK(d) = u;
+            LEN(x)--;
             q++;
         }
     }
 }
 
 void DLX::uncover(INT i) {
-    INT p = this->options[i].ulink;
-    INT l = this->items[i].llink;
-    INT r = this->items[i].rlink;
-    this->items[l].rlink = i;
-    this->items[r].llink = i;
+    INT l = LLINK(i);
+    INT r = RLINK(i);
+    RLINK(l) = i;
+    LLINK(r) = i;
+    INT p = ULINK(i);
     while (p != i) {
         this->unhide(p);
-        p = this->options[p].ulink;
+        p = ULINK(p);
     }
 }
 
@@ -220,98 +233,98 @@ void DLX::unhide(INT p) {
     INT q = p - 1;
     INT x, u, d;
     while (q != p) {
-        x = this->options[q].tl;
-        u = this->options[q].ulink;
-        d = this->options[q].dlink;
+        x = TOP(q);
+        u = ULINK(q);
+        d = DLINK(q);
         if (x <= 0) q = d;
-        else if (this->options[q].color == IGNORE_COLOR) q--;
+        else if (CLR(q) == IGNORE_COLOR) q--;
         else {
-            this->options[u].dlink = q;
-            this->options[d].ulink = q;
-            this->options[x].tl++;
+            DLINK(u) = q;
+            ULINK(d) = q;
+            LEN(x)++;
             q--;
         }
     }
 }
 
 void DLX::commit(INT p, INT j) {
-    if (this->options[p].color == EMPTY_COLOR) this->cover(j);
-    else if (this->options[p].color != IGNORE_COLOR) this->purify(p);
+    if (CLR(p) == EMPTY_COLOR) this->cover(j);
+    else if (CLR(p) != IGNORE_COLOR) this->purify(p);
 }
 
 void DLX::purify(INT p) {
-    COLOR c = this->options[p].color;
-    INT i = this->options[p].tl;
-    INT q = this->options[i].dlink;
+    COLOR c = CLR(p);
+    INT i = TOP(p);
+    INT q = DLINK(i);
     while (q != i) {
-        if (this->options[q].color == c) this->options[q].color = IGNORE_COLOR;
+        if (CLR(q) == c) CLR(q) = IGNORE_COLOR;
         else this->hide(q);
-        q = this->options[q].dlink;
+        q = DLINK(q);
     }
 }
 
 void DLX::uncommit(INT p, INT j) {
-    if (this->options[p].color == EMPTY_COLOR) this->uncover(j);
-    else if (this->options[p].color != IGNORE_COLOR) this->unpurify(p);
+    if (CLR(p) == EMPTY_COLOR) this->uncover(j);
+    else if (CLR(p) != IGNORE_COLOR) this->unpurify(p);
 }
 
 void DLX::unpurify(INT p) {
-    COLOR c = this->options[p].color;
-    INT i = this->options[p].tl;
-    INT q = this->options[i].ulink;
+    COLOR c = CLR(p);
+    INT i = TOP(p);
+    INT q = ULINK(i);
     while (q != i) {
-        if (this->options[q].color == IGNORE_COLOR) this->options[q].color = c;
+        if (CLR(q) == IGNORE_COLOR) CLR(q) = c;
         else this->unhide(q);
-        q = this->options[q].ulink;
+        q = ULINK(q);
     }
 }
 
 void DLX::tweak(INT x, INT p) {
     this->hide(x);
-    INT d = this->options[x].dlink;
-    this->options[p].dlink = d;
-    this->options[d].ulink = p;
-    this->options[p].tl--;
+    INT d = DLINK(x);
+    DLINK(p) = d;
+    ULINK(d) = p;
+    LEN(p)--;
 }
 
 void DLX::tweak_special(INT x, INT p) {
-    INT d = this->options[x].dlink;
-    this->options[p].dlink = d;
-    this->options[d].ulink = p;
-    this->options[p].tl--;
+    INT d = DLINK(x);
+    DLINK(p) = d;
+    ULINK(d) = p;
+    LEN(p)--;
 }
 
 void DLX::untweak(vector<INT> &ft, INT l) {
     INT a = ft[l], x = a, k = 0;
-    INT p = (a <= this->nb_items) ? a : this->options[a].tl;
+    INT p = (a <= this->nb_items) ? a : TOP(a);
     INT y = p;
-    INT z = this->options[p].dlink;
-    this->options[p].dlink = x;
+    INT z = DLINK(p);
+    DLINK(p) = x;
     while (x != z) {
-        this->options[x].ulink = y;
+        ULINK(x) = y;
         k++;
         this->unhide(x);
         y = x;
-        x = this->options[x].dlink;
+        x = DLINK(x);
     }
-    this->options[z].ulink = y;
-    this->options[p].tl += k;
+    ULINK(z) = y;
+    LEN(p) += k;
 }
 
 void DLX::untweak_special(vector<INT> &ft, INT l) {
     INT a = ft[l], x = a, k = 0;
-    INT p = (a <= this->nb_items) ? a : this->options[a].tl;
+    INT p = (a <= this->nb_items) ? a : TOP(a);
     INT y = p;
-    INT z = this->options[p].dlink;
-    this->options[p].dlink = x;
+    INT z = DLINK(p);
+    DLINK(p) = x;
     while (x != z) {
-        this->options[x].ulink = y;
+        ULINK(x) = y;
         k++;
         y = x;
-        x = this->options[x].dlink;
+        x = DLINK(x);
     }
-    this->options[z].ulink = y;
-    this->options[p].tl += k;
+    ULINK(z) = y;
+    LEN(p) += k;
     this->uncover(p);
 }
 
@@ -419,7 +432,7 @@ void DLX::all_solutions(function<void(void*)> pp) {
     INT i, p, j, q;
 
     M2: // cout << "M2" << endl;
-        if (this->items[0].rlink == 0) {
+        if (RLINK(0) == 0) {
             cout << "Found solution :" << endl;
             this->print_solution(x, l, pp);
             goto M9;
@@ -428,36 +441,36 @@ void DLX::all_solutions(function<void(void*)> pp) {
         i = this->choose();
         if (branch_degree(i) == 0) goto M9;
     M4: // cout << "M4" << endl;
-        x[l] = this->options[i].dlink;
-        this->items[i].bound--;
-        if (this->items[i].bound == 0) this->cover(i);
-        if (this->items[i].bound != 0 || this->items[i].slack != 0)
+        x[l] = DLINK(i);
+        BOUND(i)--;
+        if (BOUND(i) == 0) this->cover(i);
+        if (BOUND(i) != 0 || SLACK(i) != 0)
             ft[l] = x[l];
     M5: // cout << "M5" << endl;
-        if (this->items[i].bound == 0 && this->items[i].slack == 0) {
+        if (BOUND(i) == 0 && SLACK(i) == 0) {
             if (x[l] != i) goto M6;
             else goto M8;
-        } else if (this->options[i].tl <= this->items[i].bound - this->items[i].slack) {
+        } else if (LEN(i) <= BOUND(i) - SLACK(i)) {
             goto M8;
         } else if (x[l] != i) {
-            if (this->items[i].bound == 0) this->tweak_special(x[l], i);
+            if (BOUND(i) == 0) this->tweak_special(x[l], i);
             else this->tweak(x[l], i);
-        } else if (this->items[i].bound != 0) {
-            p = this->items[i].llink;
-            q = this->items[i].rlink;
-            this->items[p].rlink = q;
-            this->items[q].llink = p;
+        } else if (BOUND(i) != 0) {
+            p = LLINK(i);
+            q = RLINK(i);
+            RLINK(p) = q;
+            LLINK(q) = p;
         }
     M6: // cout << "M6" << endl;
         if (x[l] != i) {
             p = x[l] + 1;
             while (p != x[l]) {
-                j = this->options[p].tl;
-                if (j <= 0) p = this->options[p].ulink;
+                j = TOP(p);
+                if (j <= 0) p = ULINK(p);
                 else if (j <= this->nb_primary) {
-                    this->items[j].bound--;
+                    BOUND(j)--;
                     p++;
-                    if (this->items[j].bound == 0) this->cover(j);
+                    if (BOUND(j) == 0) this->cover(j);
                 } else {
                     this->commit(p, j);
                     p++;
@@ -470,41 +483,39 @@ void DLX::all_solutions(function<void(void*)> pp) {
         if (x[l] != i) {
             p = x[l] - 1;
             while (p != x[l]) {
-                j = this->options[p].tl;
-                if (j <= 0) p = this->options[p].dlink;
+                j = TOP(p);
+                if (j <= 0) p = DLINK(p);
                 else if (j <= this->nb_primary) {
-                    this->items[j].bound++;
+                    BOUND(j)++;
                     p--;
-                    if (this->items[j].bound == 1) this->uncover(j);
+                    if (BOUND(j) == 1) this->uncover(j);
                 } else {
                     this->uncommit(p, j);
                     p--;
                 }
             }
-            x[l] = this->options[x[l]].dlink;
+            x[l] = DLINK(x[l]);
             goto M5;
         }
     M8: // cout << "M8" << endl;
-        if (this->items[i].bound == 0 && this->items[i].slack == 0)
+        if (BOUND(i) == 0 && SLACK(i) == 0)
             this->uncover(i);
-        else if (this->items[i].bound == 0) this->untweak_special(ft, l);
+        else if (BOUND(i) == 0) this->untweak_special(ft, l);
         else this->untweak(ft, l);
-        this->items[i].bound++;
+        BOUND(i)++;
     M9: // cout << "M9" << endl;
         if (l == 0) return;
-        else {
-            l--;
-            if (x[l] <= this->nb_items) {
-                i = x[l];
-                p = this->items[i].llink;
-                q = this->items[i].rlink;
-                this->items[p].rlink = i;
-                this->items[q].llink = i;
-                goto M8;
-            } else {
-                i = this->options[x[l]].tl;
-                goto M7;
-            }
+        else l--;
+        if (x[l] <= this->nb_items) {
+            i = x[l];
+            p = LLINK(i);
+            q = RLINK(i);
+            RLINK(p) = i;
+            LLINK(q) = i;
+            goto M8;
+        } else {
+            i = TOP(x[l]);
+            goto M7;
         }
 }
 
