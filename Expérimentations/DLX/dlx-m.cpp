@@ -53,10 +53,6 @@ struct Node {
 #define HNode(len, ulink, dlink) Node(Header, len, ulink, dlink, 0)
 #define ONode(top, ulink, dlink, color) Node(Option, top, ulink, dlink, color)
 
-#define monus(x, y) max(x - y, (INT) 0)
-#define branch_degree(p) monus(this->options[p].tl + 1, \
-                               monus(this->items[p].bound, this->items[p].slack)) 
-
 /* Définition de macros pour que le code écrit ressemble au code de Knuth */
 #define DLINK(x) this->options[x].dlink
 #define ULINK(x) this->options[x].ulink
@@ -69,6 +65,9 @@ struct Node {
 #define NAME(x) this->items[x].name
 #define SLACK(x) this->items[x].slack
 #define BOUND(x) this->items[x].bound
+
+#define monus(x, y) max(x - y, (INT) 0)
+#define branch_degree(p) monus(LEN(p) + 1, monus(BOUND(p), SLACK(p))) 
 
 class DLX {
     public:
@@ -255,6 +254,7 @@ void DLX::commit(INT p, INT j) {
 void DLX::purify(INT p) {
     COLOR c = CLR(p);
     INT i = TOP(p);
+    CLR(i) = c;
     INT q = DLINK(i);
     while (q != i) {
         if (CLR(q) == c) CLR(q) = IGNORE_COLOR;
@@ -280,6 +280,7 @@ void DLX::unpurify(INT p) {
 }
 
 void DLX::tweak(INT x, INT p) {
+    // cout << "tweak " << x << " for item " << p << endl;
     this->hide(x);
     INT d = DLINK(x);
     DLINK(p) = d;
@@ -288,6 +289,7 @@ void DLX::tweak(INT x, INT p) {
 }
 
 void DLX::tweak_special(INT x, INT p) {
+    // cout << "tweak " << x << " for item " << p << endl;
     INT d = DLINK(x);
     DLINK(p) = d;
     ULINK(d) = p;
@@ -295,12 +297,14 @@ void DLX::tweak_special(INT x, INT p) {
 }
 
 void DLX::untweak(vector<INT> &ft, INT l) {
+    // cout << "UNTWEAK" << endl;
     INT a = ft[l], x = a, k = 0;
     INT p = (a <= this->nb_items) ? a : TOP(a);
     INT y = p;
     INT z = DLINK(p);
     DLINK(p) = x;
     while (x != z) {
+        // cout << "untweak " << x << endl;
         ULINK(x) = y;
         k++;
         this->unhide(x);
@@ -312,12 +316,14 @@ void DLX::untweak(vector<INT> &ft, INT l) {
 }
 
 void DLX::untweak_special(vector<INT> &ft, INT l) {
+    // cout << "UNTWEAK" << endl;
     INT a = ft[l], x = a, k = 0;
     INT p = (a <= this->nb_items) ? a : TOP(a);
     INT y = p;
     INT z = DLINK(p);
     DLINK(p) = x;
     while (x != z) {
+        // cout << "untweak " << x << endl;
         ULINK(x) = y;
         k++;
         y = x;
@@ -330,6 +336,7 @@ void DLX::untweak_special(vector<INT> &ft, INT l) {
 
 INT DLX::choose() {
     INT i = this->items[0].rlink;
+    return i;
     INT p;
 
     for (p = i; p != 0; p = this->items[p].rlink)
@@ -340,6 +347,8 @@ INT DLX::choose() {
 }
 
 void DLX::print_table(function<void(void*)> pp) {
+    cout << this->nb_items << " items (" << this->nb_primary << " primary)" << endl;
+
     for (auto& item : this->items) {
         cout << "Item(";
         if (item.name == nullptr) cout << "Null, ";
@@ -375,16 +384,18 @@ void DLX::print_solution(vector<INT> sol, INT l, function<void(void*)> pp) {
     INT p, x, i = 0;
 
     for (auto& opt_id : sol) {
-        if (i >= l) break;
+        if (i >= l || opt_id <= this->nb_items) break;
 
         cout << opt_id << " ";
         i++;
     }
     cout << endl;
 
+    cout << "l = " << l << endl;
+
     i = 0;
     for (auto& opt_id : sol) {
-        if (i >= l) break;
+        if (i >= l || opt_id <= this->nb_items) break;
 
         x = this->options[opt_id].tl;
         color = this->options[opt_id].color;
@@ -430,15 +441,22 @@ void DLX::all_solutions(function<void(void*)> pp) {
     vector<INT> ft(this->options.size());
     INT l = 0;
     INT i, p, j, q;
+    unsigned int nb_solutions = 0;
 
     M2: // cout << "M2" << endl;
         if (RLINK(0) == 0) {
+            // cout << "====================================================" << endl;
             cout << "Found solution :" << endl;
             this->print_solution(x, l, pp);
+            nb_solutions++;
+            // cout << "====================================================" << endl;
             goto M9;
         }
     M3: // cout << "M3" << endl;
         i = this->choose();
+        // cout << "Choose " << i << endl;
+        // cout << "Branch degree " << branch_degree(i) << endl;
+        // cout << "BOUND(i) " << BOUND(i) << endl;
         if (branch_degree(i) == 0) goto M9;
     M4: // cout << "M4" << endl;
         x[l] = DLINK(i);
@@ -476,36 +494,48 @@ void DLX::all_solutions(function<void(void*)> pp) {
                     p++;
                 }
             }
-            l++;
-            goto M2;
         }
+        l++;
+        goto M2;
     M7: // cout << "M7" << endl;
-        if (x[l] != i) {
-            p = x[l] - 1;
-            while (p != x[l]) {
-                j = TOP(p);
-                if (j <= 0) p = DLINK(p);
-                else if (j <= this->nb_primary) {
-                    BOUND(j)++;
-                    p--;
-                    if (BOUND(j) == 1) this->uncover(j);
-                } else {
-                    this->uncommit(p, j);
-                    p--;
-                }
+        // if (x[l] != i) {
+        p = x[l] - 1;
+        while (p != x[l]) {
+            j = TOP(p);
+            if (j <= 0) p = DLINK(p);
+            else if (j <= this->nb_primary) {
+                BOUND(j)++;
+                p--;
+                if (BOUND(j) == 1) this->uncover(j);
+            } else {
+                this->uncommit(p, j);
+                p--;
             }
-            x[l] = DLINK(x[l]);
-            goto M5;
         }
+        // }
+        x[l] = DLINK(x[l]);
+        // cout << "x_l " << x[l] << endl;
+        goto M5;
     M8: // cout << "M8" << endl;
+        // cout << "BOUND(i) " << BOUND(i) << endl;
+        // cout << "SLACK(i) " << SLACK(i) << endl;
         if (BOUND(i) == 0 && SLACK(i) == 0)
             this->uncover(i);
         else if (BOUND(i) == 0) this->untweak_special(ft, l);
         else this->untweak(ft, l);
         BOUND(i)++;
+        // cout << "BOUND(i) " << BOUND(i) << endl;
     M9: // cout << "M9" << endl;
-        if (l == 0) return;
-        else l--;
+        // cout << "M9 - l=" << l << endl;
+        if (l == 0) {
+            cout << "---------------------------------" << endl;
+            cout << nb_solutions << " solutions found." << endl;
+            cout << "---------------------------------" << endl; 
+            return;
+        } else l--;
+        // cout << "M9 - l=" << l << endl;
+        // cout << "x_l " << x[l] << endl;
+        // cout << "N " << this->nb_items << endl;
         if (x[l] <= this->nb_items) {
             i = x[l];
             p = LLINK(i);
