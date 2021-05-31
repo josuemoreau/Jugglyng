@@ -391,8 +391,6 @@ void DLX::print_solution(vector<INT> sol, INT l, function<void(void*)> pp) {
     }
     cout << endl;
 
-    cout << "l = " << l << endl;
-
     i = 0;
     for (auto& opt_id : sol) {
         if (i >= l || opt_id <= this->nb_items) break;
@@ -621,6 +619,25 @@ void test3() {
     dlx.all_solutions(pp_string);
 }
 
+void test4() {
+    string *x = new string("x");
+
+    vector<tuple<void*, INT, INT>> primary = {
+        make_tuple(x, 0, 3)
+    };
+
+    DLX dlx(primary, {}, {});
+    dlx.add_row({x}, {});
+    dlx.add_row({x}, {});
+    dlx.add_row({x}, {});
+    dlx.add_row({x}, {});
+    dlx.add_row({x}, {});
+
+    dlx.print_table(pp_string);
+
+    dlx.all_solutions(pp_string);
+}
+
 int main(int argc, char** argv) {
     auto pp_string_lambda = [](void* s) {
         cout << *((string*)s);
@@ -632,7 +649,8 @@ int main(int argc, char** argv) {
     test2();
     cout << "======== TEST 3 ========" << endl;
     test3();
-
+    cout << "======== TEST 4 ========" << endl;
+    test4();
  
     return 0;
 }
