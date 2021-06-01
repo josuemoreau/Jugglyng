@@ -12,15 +12,12 @@
 #include <string>
 
 
-DLX::DLX(vector<tuple<void*, INT, INT>> primary,
-         vector<void*> secondary, 
-         vector<tuple<vector<void*>, vector<tuple<void*, COLOR>>>> rows,
-         function<void(void*)> pp) {
+DLX::DLX(vector<tuple<AbstrItem*, INT, INT>> primary,
+         vector<AbstrItem*> secondary, 
+         vector<tuple<vector<AbstrItem*>, vector<tuple<AbstrItem*, COLOR>>>> rows) {
     INT i = 0;
-    void* name;
+    AbstrItem* name;
     INT u, v;
-
-    this->pp = pp;
 
     this->items.push_back(Item(nullptr, primary.size(), 1, -1, -1));
     this->options.push_back(SepNode(0, 0));
@@ -56,15 +53,15 @@ DLX::DLX(vector<tuple<void*, INT, INT>> primary,
     this->nb_option_nodes++;
 
     for (auto row : rows) {
-        vector<void*> row_primary;
-        vector<tuple<void*, COLOR>> row_secondary;
+        vector<AbstrItem*> row_primary;
+        vector<tuple<AbstrItem*, COLOR>> row_secondary;
         tie(row_primary, row_secondary) = row;
         this->add_row(row_primary, row_secondary);
     }
 }
 
-void DLX::add_row(vector<void*> row_primary, 
-                  vector<tuple<void*, COLOR>> row_secondary) {
+void DLX::add_row(vector<AbstrItem*> row_primary, 
+                  vector<tuple<AbstrItem*, COLOR>> row_secondary) {
     INT first_node = this->nb_option_nodes;
     INT item_id, last_item_node;
 
@@ -81,7 +78,7 @@ void DLX::add_row(vector<void*> row_primary,
         this->nb_option_nodes++;
     }
     
-    void* element;    
+    AbstrItem* element;    
     COLOR color;
     for (auto option : row_secondary) {
         tie(element, color) = option;
@@ -262,14 +259,12 @@ INT DLX::choose() {
 }
 
 void DLX::print_table() {
-    if (this->pp == nullptr) return;
-
     cout << this->nb_items << " items (" << this->nb_primary << " primary)" << endl;
 
     for (auto& item : this->items) {
         cout << "Item(";
         if (item.name == nullptr) cout << "Null, ";
-        else { this->pp(item.name); cout << ", "; }
+        else { item.name->print(); cout << ", "; }
         cout << item.llink << ", "
                 << item.rlink;
         if (item.slack != -1 && item.bound != -1)
@@ -308,23 +303,21 @@ vector<INT> DLX::solution_lines(vector<INT> x, INT l) {
 }
 
 void DLX::print_rows(vector<INT> rows) {
-    if (this->pp == nullptr) return;
-
-    vector<void*> row_primary;
-    vector<tuple<void*, COLOR>> row_secondary;
+    vector<AbstrItem*> row_primary;
+    vector<tuple<AbstrItem*, COLOR>> row_secondary;
 
     for (auto& row_id : rows) {
         tie(row_primary, row_secondary) = this->rows[row_id];
         for (auto& elem : row_primary) {
-            this->pp(elem);
+            elem->print();
             cout << " ";
         }
 
+        AbstrItem* elem;
+        COLOR clr;
         for (auto& elem_color : row_secondary) {
-            void* elem;
-            COLOR clr;
             tie(elem, clr) = elem_color;
-            this->pp(elem);
+            elem->print();
             cout << ":" << clr << " ";
         }
 
@@ -333,8 +326,6 @@ void DLX::print_rows(vector<INT> rows) {
 }
 
 void DLX::print_solution(vector<INT> sol) {
-    if (this->pp == nullptr) return;
-
     cout << "Solution [ ";
     for (auto& row_id : sol)
         cout << row_id << " ";
@@ -458,113 +449,4 @@ vector<vector<INT>> DLX::all_solutions() {
             i = TOP(x[l]);
             goto M7;
         }
-}
-
-void pp_string(void* s) {
-    cout << *((string*)s);
-}
-
-void test1() {
-    string *p = new string("p");
-    string *q = new string("q");
-    string *r = new string("r");
-    string *x = new string("x");
-    string *y = new string("y");
-
-    vector<tuple<void*, INT, INT>> primary = {
-        make_tuple(p, 1, 1), 
-        make_tuple(q, 1, 1), 
-        make_tuple(r, 1, 1)
-    };
-    vector<void*> secondary = {x, y};
-
-    DLX dlx(primary, secondary, {}, pp_string);
-    dlx.add_row({p, q}, {make_tuple(x, EMPTY_COLOR), make_tuple(y, 1)});
-    dlx.add_row({p, r}, {make_tuple(x, 1), make_tuple(y, EMPTY_COLOR)});
-    dlx.add_row({p}, {make_tuple(x, 2)});
-    dlx.add_row({q}, {make_tuple(x, 1)});
-    dlx.add_row({r}, {make_tuple(y, 1)});
-    
-    dlx.print_table();
-
-    dlx.all_solutions();
-}
-
-void test2() {
-    string *p = new string("p");
-    string *q = new string("q");
-    string *r = new string("r");
-
-    vector<tuple<void*, INT, INT>> primary = {
-        make_tuple(p, 1, 1), 
-        make_tuple(q, 1, 1), 
-        make_tuple(r, 1, 1)
-    };
-
-    DLX dlx(primary, {}, {}, pp_string);
-    dlx.add_row({p, q}, {});
-    dlx.add_row({p, r}, {});
-    dlx.add_row({p}, {});
-    dlx.add_row({q}, {});
-    dlx.add_row({r}, {});
-
-    dlx.print_table();
-
-    dlx.all_solutions();
-}
-
-void test3() {
-    string *x = new string("x");
-
-    vector<tuple<void*, INT, INT>> primary = {
-        make_tuple(x, 0, 5)
-    };
-
-    DLX dlx(primary, {}, {}, pp_string);
-    dlx.add_row({x}, {});
-    dlx.add_row({x}, {});
-    dlx.add_row({x}, {});
-    dlx.add_row({x}, {});
-    dlx.add_row({x}, {});
-
-    dlx.print_table();
-
-    dlx.all_solutions();
-}
-
-void test4() {
-    string *x = new string("x");
-    string *y = new string("y");
-
-    vector<tuple<void*, INT, INT>> primary = {
-        make_tuple(x, 0, 3)
-    };
-
-    DLX dlx(primary, {}, {}, pp_string);
-    dlx.add_row({x}, {});
-    dlx.add_row({x}, {});
-    dlx.add_row({x}, {});
-    dlx.add_row({x}, {});
-    dlx.add_row({x}, {});
-
-    dlx.print_table();
-
-    dlx.all_solutions();
-}
-
-int main(int argc, char** argv) {
-    auto pp_string_lambda = [](void* s) {
-        cout << *((string*)s);
-    };
-
-    cout << "======== TEST 1 ========" << endl;
-    test1();
-    cout << "======== TEST 2 ========" << endl;
-    test2();
-    cout << "======== TEST 3 ========" << endl;
-    test3();
-    cout << "======== TEST 4 ========" << endl;
-    test4();
- 
-    return 0;
 }

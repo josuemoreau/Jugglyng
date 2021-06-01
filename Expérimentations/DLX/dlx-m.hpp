@@ -10,14 +10,19 @@
 
 using namespace std;
 
+class AbstrItem {
+public:
+    virtual void print() {}
+};
+
 struct Item {
     INT llink;
     INT rlink;
-    void* name;
+    AbstrItem* name;
     INT slack;
     INT bound;
 
-    Item(void* name, INT llink, INT rlink, INT slack, INT bound) : 
+    Item(AbstrItem* name, INT llink, INT rlink, INT slack, INT bound) : 
          name(name), llink(llink), rlink(rlink), slack(slack), bound(bound) {}
 };
 
@@ -64,18 +69,12 @@ struct Node {
 
 class DLX {
     public:
-        DLX(vector<tuple<void*, INT, INT>> primary,
-            vector<void*> secondary, 
-            vector<tuple<vector<void*>, vector<tuple<void*, COLOR>>>> rows,
-            function<void(void*)> pp);
+        DLX(vector<tuple<AbstrItem*, INT, INT>> primary,
+            vector<AbstrItem*> secondary, 
+            vector<tuple<vector<AbstrItem*>, vector<tuple<AbstrItem*, COLOR>>>> rows);
 
-        DLX(vector<tuple<void*, INT, INT>> primary,
-            vector<void*> secondary, 
-            vector<tuple<vector<void*>, vector<tuple<void*, COLOR>>>> rows) :
-            DLX(primary, secondary, rows, nullptr) {};
-
-        void add_row(vector<void*> row_primary, 
-                     vector<tuple<void*, COLOR>> row_secondary);
+        void add_row(vector<AbstrItem*> row_primary, 
+                     vector<tuple<AbstrItem*, COLOR>> row_secondary);
         
         vector<vector<INT>> all_solutions();
 
@@ -86,10 +85,8 @@ class DLX {
     private:
         vector<Item> items;
         vector<Node> options;
-        unordered_map<void*, INT> corresp;
-        vector<tuple<vector<void*>, vector<tuple<void*, COLOR>>>> rows;
-
-        function<void(void*)> pp;
+        unordered_map<AbstrItem*, INT> corresp;
+        vector<tuple<vector<AbstrItem*>, vector<tuple<AbstrItem*, COLOR>>>> rows;
 
         INT nb_option_nodes = 1;
         INT nb_items = 0;
