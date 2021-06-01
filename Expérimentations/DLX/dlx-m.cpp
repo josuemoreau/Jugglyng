@@ -76,22 +76,30 @@ class DLX {
     public:
         DLX(vector<tuple<void*, INT, INT>> primary,
             vector<void*> secondary, 
-            vector<tuple<vector<void*>, vector<tuple<void*, COLOR>>>> rows);
+            vector<tuple<vector<void*>, vector<tuple<void*, COLOR>>>> rows,
+            function<void(void*)> pp);
+
+        DLX(vector<tuple<void*, INT, INT>> primary,
+            vector<void*> secondary, 
+            vector<tuple<vector<void*>, vector<tuple<void*, COLOR>>>> rows) :
+            DLX(primary, secondary, rows, nullptr) {};
 
         void add_row(vector<void*> row_primary, 
                      vector<tuple<void*, COLOR>> row_secondary);
         
-        vector<vector<INT>> all_solutions(function<void(void*)> pp);
+        vector<vector<INT>> all_solutions();
 
-        void print_table(function<void(void*)> pp);
-        void print_rows(vector<INT> rows, function<void(void*)> pp);
-        void print_solution(vector<INT> sol, function<void(void*)> pp);
+        void print_table();
+        void print_rows(vector<INT> rows);
+        void print_solution(vector<INT> sol);
 
     private:
         vector<Item> items;
         vector<Node> options;
         unordered_map<void*, INT> corresp;
         vector<tuple<vector<void*>, vector<tuple<void*, COLOR>>>> rows;
+
+        function<void(void*)> pp;
 
         INT nb_option_nodes = 1;
         INT nb_items = 0;
@@ -117,10 +125,13 @@ class DLX {
 
 DLX::DLX(vector<tuple<void*, INT, INT>> primary,
          vector<void*> secondary, 
-         vector<tuple<vector<void*>, vector<tuple<void*, COLOR>>>> rows) {
+         vector<tuple<vector<void*>, vector<tuple<void*, COLOR>>>> rows,
+         function<void(void*)> pp) {
     INT i = 0;
     void* name;
     INT u, v;
+
+    this->pp = pp;
 
     this->items.push_back(Item(nullptr, primary.size(), 1, -1, -1));
     this->options.push_back(SepNode(0, 0));
@@ -361,13 +372,15 @@ INT DLX::choose() {
     return i;
 }
 
-void DLX::print_table(function<void(void*)> pp) {
+void DLX::print_table() {
+    if (this->pp == nullptr) return;
+
     cout << this->nb_items << " items (" << this->nb_primary << " primary)" << endl;
 
     for (auto& item : this->items) {
         cout << "Item(";
         if (item.name == nullptr) cout << "Null, ";
-        else { pp(item.name); cout << ", "; }
+        else { this->pp(item.name); cout << ", "; }
         cout << item.llink << ", "
                 << item.rlink;
         if (item.slack != -1 && item.bound != -1)
@@ -405,14 +418,16 @@ vector<INT> DLX::solution_lines(vector<INT> x, INT l) {
     return sol;
 }
 
-void DLX::print_rows(vector<INT> rows, function<void(void*)> pp) {
+void DLX::print_rows(vector<INT> rows) {
+    if (this->pp == nullptr) return;
+
     vector<void*> row_primary;
     vector<tuple<void*, COLOR>> row_secondary;
 
     for (auto& row_id : rows) {
         tie(row_primary, row_secondary) = this->rows[row_id];
         for (auto& elem : row_primary) {
-            pp(elem);
+            this->pp(elem);
             cout << " ";
         }
 
@@ -420,7 +435,7 @@ void DLX::print_rows(vector<INT> rows, function<void(void*)> pp) {
             void* elem;
             COLOR clr;
             tie(elem, clr) = elem_color;
-            pp(elem);
+            this->pp(elem);
             cout << ":" << clr << " ";
         }
 
@@ -428,15 +443,17 @@ void DLX::print_rows(vector<INT> rows, function<void(void*)> pp) {
     }
 }
 
-void DLX::print_solution(vector<INT> sol, function<void(void*)> pp) {
+void DLX::print_solution(vector<INT> sol) {
+    if (this->pp == nullptr) return;
+
     cout << "Solution [ ";
     for (auto& row_id : sol)
         cout << row_id << " ";
     cout << "] :" << endl;
-    print_rows(sol, pp);
+    print_rows(sol);
 }
 
-vector<vector<INT>> DLX::all_solutions(function<void(void*)> pp) {
+vector<vector<INT>> DLX::all_solutions() {
     vector<INT> x(this->options.size());
     vector<INT> ft(this->options.size());
     INT l = 0;
@@ -452,7 +469,7 @@ vector<vector<INT>> DLX::all_solutions(function<void(void*)> pp) {
             // this->print_solution(x, l, pp);
             vector<INT> sol = this->solution_lines(x, l);
             solutions.push_back(sol);
-            this->print_solution(sol, pp);
+            this->print_solution(sol);
             nb_solutions++;
             // cout << "====================================================" << endl;
             goto M9;
@@ -572,16 +589,16 @@ void test1() {
     };
     vector<void*> secondary = {x, y};
 
-    DLX dlx(primary, secondary, {});
+    DLX dlx(primary, secondary, {}, pp_string);
     dlx.add_row({p, q}, {make_tuple(x, EMPTY_COLOR), make_tuple(y, 1)});
     dlx.add_row({p, r}, {make_tuple(x, 1), make_tuple(y, EMPTY_COLOR)});
     dlx.add_row({p}, {make_tuple(x, 2)});
     dlx.add_row({q}, {make_tuple(x, 1)});
     dlx.add_row({r}, {make_tuple(y, 1)});
     
-    dlx.print_table(pp_string);
+    dlx.print_table();
 
-    dlx.all_solutions(pp_string);
+    dlx.all_solutions();
 }
 
 void test2() {
@@ -595,16 +612,16 @@ void test2() {
         make_tuple(r, 1, 1)
     };
 
-    DLX dlx(primary, {}, {});
+    DLX dlx(primary, {}, {}, pp_string);
     dlx.add_row({p, q}, {});
     dlx.add_row({p, r}, {});
     dlx.add_row({p}, {});
     dlx.add_row({q}, {});
     dlx.add_row({r}, {});
 
-    dlx.print_table(pp_string);
+    dlx.print_table();
 
-    dlx.all_solutions(pp_string);
+    dlx.all_solutions();
 }
 
 void test3() {
@@ -614,35 +631,36 @@ void test3() {
         make_tuple(x, 0, 5)
     };
 
-    DLX dlx(primary, {}, {});
+    DLX dlx(primary, {}, {}, pp_string);
     dlx.add_row({x}, {});
     dlx.add_row({x}, {});
     dlx.add_row({x}, {});
     dlx.add_row({x}, {});
     dlx.add_row({x}, {});
 
-    dlx.print_table(pp_string);
+    dlx.print_table();
 
-    dlx.all_solutions(pp_string);
+    dlx.all_solutions();
 }
 
 void test4() {
     string *x = new string("x");
+    string *y = new string("y");
 
     vector<tuple<void*, INT, INT>> primary = {
         make_tuple(x, 0, 3)
     };
 
-    DLX dlx(primary, {}, {});
+    DLX dlx(primary, {}, {}, pp_string);
     dlx.add_row({x}, {});
     dlx.add_row({x}, {});
     dlx.add_row({x}, {});
     dlx.add_row({x}, {});
     dlx.add_row({x}, {});
 
-    dlx.print_table(pp_string);
+    dlx.print_table();
 
-    dlx.all_solutions(pp_string);
+    dlx.all_solutions();
 }
 
 int main(int argc, char** argv) {
