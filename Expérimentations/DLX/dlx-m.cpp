@@ -45,13 +45,16 @@ struct Node {
     INT ulink;
     INT dlink;
     COLOR color;
+    INT row_number;
 
-    Node(NodeType type, INT tl, INT ulink, INT dlink, COLOR color) :
-         type(type), tl(tl), ulink(ulink), dlink(dlink), color(color) {}
+    Node(NodeType type, INT tl, INT ulink, INT dlink, COLOR color, INT rnum) :
+         type(type), tl(tl), ulink(ulink), dlink(dlink), color(color),
+         row_number(rnum) {}
 };
 
-#define HNode(len, ulink, dlink) Node(Header, len, ulink, dlink, 0)
-#define ONode(top, ulink, dlink, color) Node(Option, top, ulink, dlink, color)
+#define HNode(len, ulink, dlink, rnum) Node(Header, len, ulink, dlink, 0, rnum)
+#define ONode(top, ulink, dlink, color, rnum) Node(Option, top, ulink, dlink, color, rnum)
+#define SepNode(ulink, dlink) Node(Option, 0, ulink, dlink, EMPTY_COLOR, 0)
 
 /* Définition de macros pour que le code écrit ressemble au code de Knuth */
 #define DLINK(x) this->options[x].dlink
@@ -74,21 +77,26 @@ class DLX {
         DLX(vector<tuple<void*, INT, INT>> primary,
             vector<void*> secondary, 
             vector<tuple<vector<void*>, vector<tuple<void*, COLOR>>>> rows);
-        void print_table(function<void(void*)> pp);
-        void all_solutions(function<void(void*)> pp);
-        void print_solution(vector<INT> sol, INT l, function<void(void*)> pp);
 
         void add_row(vector<void*> row_primary, 
                      vector<tuple<void*, COLOR>> row_secondary);
+        
+        vector<vector<INT>> all_solutions(function<void(void*)> pp);
+
+        void print_table(function<void(void*)> pp);
+        void print_rows(vector<INT> rows, function<void(void*)> pp);
+        void print_solution(vector<INT> sol, function<void(void*)> pp);
 
     private:
         vector<Item> items;
         vector<Node> options;
         unordered_map<void*, INT> corresp;
+        vector<tuple<vector<void*>, vector<tuple<void*, COLOR>>>> rows;
 
         INT nb_option_nodes = 1;
         INT nb_items = 0;
         INT nb_primary = 0;
+        INT nb_rows = 0;
 
         void cover(INT i);
         void hide(INT i);
@@ -103,6 +111,8 @@ class DLX {
         void untweak(vector<INT> &ft, INT l);
         void untweak_special(vector<INT> &ft, INT l);
         INT choose();
+
+        vector<INT> solution_lines(vector<INT> x, INT l);
 };
 
 DLX::DLX(vector<tuple<void*, INT, INT>> primary,
@@ -113,7 +123,7 @@ DLX::DLX(vector<tuple<void*, INT, INT>> primary,
     INT u, v;
 
     this->items.push_back(Item(nullptr, primary.size(), 1, -1, -1));
-    this->options.push_back(ONode(0, 0, 0, EMPTY_COLOR));
+    this->options.push_back(SepNode(0, 0));
 
     for (auto item : primary) {
         // le numéro de la colonne actuelle est i + 1
@@ -121,7 +131,7 @@ DLX::DLX(vector<tuple<void*, INT, INT>> primary,
         tie(name, u, v) = item;
         this->items.push_back(Primary(name, i, i + 2, v - u, v));
         this->corresp.emplace(name, i + 1);
-        this->options.push_back(HNode(0, i + 1, i + 1));
+        this->options.push_back(HNode(0, i + 1, i + 1, -1));
         this->nb_option_nodes++;
         i++;
     }
@@ -133,7 +143,7 @@ DLX::DLX(vector<tuple<void*, INT, INT>> primary,
     for (auto item : secondary) {
         this->items.push_back(Secondary(item, i, i + 2));
         this->corresp.emplace(item, i + 1);
-        this->options.push_back(HNode(0, i + 1, i + 1));
+        this->options.push_back(HNode(0, i + 1, i + 1, -1));
         this->nb_option_nodes++;
         i++;
     }
@@ -142,7 +152,7 @@ DLX::DLX(vector<tuple<void*, INT, INT>> primary,
 
     this->nb_items = this->nb_option_nodes - 1;
     
-    this->options.push_back(ONode(0, 0, 0, EMPTY_COLOR));
+    this->options.push_back(SepNode(0, 0));
     this->nb_option_nodes++;
 
     for (auto row : rows) {
@@ -158,10 +168,13 @@ void DLX::add_row(vector<void*> row_primary,
     INT first_node = this->nb_option_nodes;
     INT item_id, last_item_node;
 
+    this->rows.push_back(make_tuple(row_primary, row_secondary));
+
     for (auto option : row_primary) {
         item_id = this->corresp[option];
         last_item_node = this->options[item_id].ulink;
-        this->options.push_back(ONode(item_id, last_item_node, item_id, EMPTY_COLOR));
+        this->options.push_back(ONode(item_id, last_item_node, item_id, 
+                                      EMPTY_COLOR, this->nb_rows));
         this->options[last_item_node].dlink = this->nb_option_nodes;
         this->options[item_id].ulink = this->nb_option_nodes;
         this->options[item_id].tl++;
@@ -174,7 +187,8 @@ void DLX::add_row(vector<void*> row_primary,
         tie(element, color) = option;
         item_id = this->corresp[element];
         last_item_node = this->options[item_id].ulink;
-        this->options.push_back(ONode(item_id, last_item_node, item_id, color));
+        this->options.push_back(ONode(item_id, last_item_node, item_id, 
+                                      color, this->nb_rows));
         this->options[last_item_node].dlink = this->nb_option_nodes;
         this->options[item_id].ulink = this->nb_option_nodes;
         this->options[item_id].tl++;
@@ -182,8 +196,9 @@ void DLX::add_row(vector<void*> row_primary,
     }
 
     this->options[first_node - 1].dlink = this->nb_option_nodes - 1;
-    this->options.push_back(ONode(-1, first_node, 0, EMPTY_COLOR));
+    this->options.push_back(SepNode(first_node, 0));
     this->nb_option_nodes++;
+    this->nb_rows++;
 }
 
 void DLX::cover(INT i) {
@@ -377,75 +392,67 @@ void DLX::print_table(function<void(void*)> pp) {
     }
 }
 
-void DLX::print_solution(vector<INT> sol, INT l, function<void(void*)> pp) {
-    vector<vector<tuple<void*, COLOR>>> rows;
-    unordered_map<INT, COLOR> colors;
-    COLOR color;
-    INT p, x, i = 0;
+vector<INT> DLX::solution_lines(vector<INT> x, INT l) {
+    vector<INT> sol;
+    INT i = 0;
 
-    for (auto& opt_id : sol) {
+    for (auto& opt_id : x) {
         if (i >= l || opt_id <= this->nb_items) break;
 
-        cout << opt_id << " ";
-        i++;
-    }
-    cout << endl;
-
-    i = 0;
-    for (auto& opt_id : sol) {
-        if (i >= l || opt_id <= this->nb_items) break;
-
-        x = this->options[opt_id].tl;
-        color = this->options[opt_id].color;
-        if (color != EMPTY_COLOR)
-            colors.emplace(x, color);
-        
-        vector<tuple<void*, COLOR>> row = 
-            {make_tuple(this->items[x].name, color)};
-        
-        p = opt_id + 1;
-        while (p != opt_id) {
-            x = this->options[p].tl;
-            color = this->options[p].color;
-            if (x <= 0) p = this->options[p].ulink;
-            else {
-                if (color == IGNORE_COLOR)
-                    color = colors[x];
-                else if (color != EMPTY_COLOR)
-                    colors.emplace(x, color);
-                row.push_back(make_tuple(this->items[x].name, color));
-                p++;
-            }
-        }
-        rows.push_back(row);
-        i++;
+        sol.push_back(this->options[opt_id].row_number);
     }
 
-    // print rows
-    void* name;
-    for (auto& row : rows) {
-        for (auto& opt : row) {
-            tie(name, color) = opt;
-            pp(name);
-            if (color != EMPTY_COLOR) cout << ":" << color;
+    return sol;
+}
+
+void DLX::print_rows(vector<INT> rows, function<void(void*)> pp) {
+    vector<void*> row_primary;
+    vector<tuple<void*, COLOR>> row_secondary;
+
+    for (auto& row_id : rows) {
+        tie(row_primary, row_secondary) = this->rows[row_id];
+        for (auto& elem : row_primary) {
+            pp(elem);
             cout << " ";
         }
+
+        for (auto& elem_color : row_secondary) {
+            void* elem;
+            COLOR clr;
+            tie(elem, clr) = elem_color;
+            pp(elem);
+            cout << ":" << clr << " ";
+        }
+
         cout << endl;
     }
 }
 
-void DLX::all_solutions(function<void(void*)> pp) {
+void DLX::print_solution(vector<INT> sol, function<void(void*)> pp) {
+    cout << "Solution [ ";
+    for (auto& row_id : sol)
+        cout << row_id << " ";
+    cout << "] :" << endl;
+    print_rows(sol, pp);
+}
+
+vector<vector<INT>> DLX::all_solutions(function<void(void*)> pp) {
     vector<INT> x(this->options.size());
     vector<INT> ft(this->options.size());
     INT l = 0;
     INT i, p, j, q;
     unsigned int nb_solutions = 0;
 
+    vector<vector<INT>> solutions;
+
     M2: // cout << "M2" << endl;
         if (RLINK(0) == 0) {
             // cout << "====================================================" << endl;
-            cout << "Found solution :" << endl;
-            this->print_solution(x, l, pp);
+            // cout << "Found solution :" << endl;
+            // this->print_solution(x, l, pp);
+            vector<INT> sol = this->solution_lines(x, l);
+            solutions.push_back(sol);
+            this->print_solution(sol, pp);
             nb_solutions++;
             // cout << "====================================================" << endl;
             goto M9;
@@ -529,7 +536,7 @@ void DLX::all_solutions(function<void(void*)> pp) {
             cout << "---------------------------------" << endl;
             cout << nb_solutions << " solutions found." << endl;
             cout << "---------------------------------" << endl; 
-            return;
+            return solutions;
         } else l--;
         // cout << "M9 - l=" << l << endl;
         // cout << "x_l " << x[l] << endl;
