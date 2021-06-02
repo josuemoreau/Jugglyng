@@ -11,6 +11,7 @@
 #include <iostream>
 #include <string>
 
+using namespace DLX_M;
 
 DLX::DLX(vector<tuple<AbstrItem*, INT, INT>> primary,
          vector<AbstrItem*> secondary, 

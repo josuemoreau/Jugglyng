@@ -3,6 +3,8 @@
 #include <functional>
 #include <cmath>
 
+namespace DLX_M {
+
 #define INT long int
 #define COLOR int
 #define EMPTY_COLOR 0
@@ -109,3 +111,5 @@ class DLX {
 
         vector<INT> solution_lines(vector<INT> x, INT l);
 };
+
+}

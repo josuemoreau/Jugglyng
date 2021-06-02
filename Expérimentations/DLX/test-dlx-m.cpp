@@ -3,11 +3,12 @@
 #include <string>
 
 using namespace std;
+using namespace DLX_M;
 
 class Conc : public AbstrItem {
 public:
     Conc(string s) { this->s = s; }
-    void print() { cout << this->s << endl; }
+    void print() { cout << this->s; }
 
 private:
     string s;
