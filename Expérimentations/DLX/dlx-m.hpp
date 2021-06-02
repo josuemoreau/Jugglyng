@@ -79,7 +79,9 @@ class DLX {
         void add_row(vector<AbstrItem*> row_primary, 
                      vector<tuple<AbstrItem*, COLOR>> row_secondary);
         
-        vector<vector<INT>> all_solutions();
+        vector<vector<INT>> all_solutions(bool verbose = false);
+
+        vector<INT> solution_rows(vector<INT> x, INT l);
 
         void print_table();
         void print_rows(vector<INT> rows);
@@ -109,8 +111,6 @@ class DLX {
         void untweak(vector<INT> &ft, INT l);
         void untweak_special(vector<INT> &ft, INT l);
         INT choose();
-
-        vector<INT> solution_lines(vector<INT> x, INT l);
 };
 
 }

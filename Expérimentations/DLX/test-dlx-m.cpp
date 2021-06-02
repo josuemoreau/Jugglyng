@@ -37,7 +37,7 @@ void test1() {
     
     dlx.print_table();
 
-    dlx.all_solutions();
+    dlx.all_solutions(true);
 }
 
 void test2() {
@@ -60,7 +60,7 @@ void test2() {
 
     dlx.print_table();
 
-    dlx.all_solutions();
+    dlx.all_solutions(true);
 }
 
 void test3() {
@@ -79,7 +79,7 @@ void test3() {
 
     dlx.print_table();
 
-    dlx.all_solutions();
+    dlx.all_solutions(true);
 }
 
 void test4() {
@@ -99,7 +99,7 @@ void test4() {
 
     dlx.print_table();
 
-    dlx.all_solutions();
+    dlx.all_solutions(true);
 }
 
 int main(int argc, char** argv) {

@@ -290,7 +290,7 @@ void DLX::print_table() {
     }
 }
 
-vector<INT> DLX::solution_lines(vector<INT> x, INT l) {
+vector<INT> DLX::solution_rows(vector<INT> x, INT l) {
     vector<INT> sol;
     INT i = 0;
 
@@ -334,7 +334,7 @@ void DLX::print_solution(vector<INT> sol) {
     print_rows(sol);
 }
 
-vector<vector<INT>> DLX::all_solutions() {
+vector<vector<INT>> DLX::all_solutions(bool verbose) {
     vector<INT> x(this->options.size());
     vector<INT> ft(this->options.size());
     INT l = 0;
@@ -348,9 +348,9 @@ vector<vector<INT>> DLX::all_solutions() {
             // cout << "====================================================" << endl;
             // cout << "Found solution :" << endl;
             // this->print_solution(x, l, pp);
-            vector<INT> sol = this->solution_lines(x, l);
+            vector<INT> sol = this->solution_rows(x, l);
             solutions.push_back(sol);
-            this->print_solution(sol);
+            if (verbose) this->print_solution(sol);
             nb_solutions++;
             // cout << "====================================================" << endl;
             goto M9;
@@ -431,9 +431,11 @@ vector<vector<INT>> DLX::all_solutions() {
     M9: // cout << "M9" << endl;
         // cout << "M9 - l=" << l << endl;
         if (l == 0) {
-            cout << "---------------------------------" << endl;
-            cout << nb_solutions << " solutions found." << endl;
-            cout << "---------------------------------" << endl; 
+            if (verbose) {
+                cout << "---------------------------------" << endl;
+                cout << nb_solutions << " solutions found." << endl;
+                cout << "---------------------------------" << endl; 
+            }
             return solutions;
         } else l--;
         // cout << "M9 - l=" << l << endl;
