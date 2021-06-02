@@ -84,7 +84,6 @@ void test3() {
 
 void test4() {
     Conc *x = new Conc("x");
-    Conc *y = new Conc("y");
 
     vector<tuple<AbstrItem*, INT, INT>> primary = {
         make_tuple(x, 0, 3)

@@ -139,28 +139,14 @@ class DLXM():
         return [set(sol) for sol in sols]
 
 
-# Test
-# x = ConcItem()
-# x.set('x')
-
-# primary = P([(x, 0, 5)])
-# secondary = S([])
-# rows = R([])
-
-# dlx = DLX(primary, secondary, rows)
-# dlx.add_row(RP([x]), RS([]))
-# dlx.add_row(RP([x]), RS([]))
-# dlx.add_row(RP([x]), RS([]))
-# dlx.add_row(RP([x]), RS([]))
-# dlx.add_row(RP([x]), RS([]))
-# dlx.all_solutions()
-
 if __name__ == "__main__":
     def print_solutions(sols):
         for sol in sols:
             print("Solution", sol, ":")
             for i in sol:
-                print(dlx.row(i))
+                for e in dlx.row(i):
+                    print(e, end=" ")
+                print("")
         print("--\n%d solutions" % len(sols))
 
     print("=== TEST 1 ===")
@@ -191,6 +177,17 @@ if __name__ == "__main__":
     print("=== TEST 3 ===")
     dlx = DLXM()
     x = dlx.new_variable(0, 5)
+    dlx.add_row([x[0]])
+    dlx.add_row([x[0]])
+    dlx.add_row([x[0]])
+    dlx.add_row([x[0]])
+    dlx.add_row([x[0]])
+    sols = dlx.all_solutions()
+    print_solutions(sols)
+
+    print("=== TEST 4 ===")
+    dlx = DLXM()
+    x = dlx.new_variable(0, 3)
     dlx.add_row([x[0]])
     dlx.add_row([x[0]])
     dlx.add_row([x[0]])
