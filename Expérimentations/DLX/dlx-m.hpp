@@ -5,8 +5,9 @@
 
 namespace DLX_M {
 
-#define INT long int
-#define COLOR int
+typedef long int INT;
+typedef int COLOR;
+
 #define EMPTY_COLOR 0
 #define IGNORE_COLOR -1
 
