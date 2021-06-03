@@ -295,7 +295,8 @@ vector<INT> DLX::solution_rows(vector<INT> x, INT l) {
     INT i = 0;
 
     for (auto& opt_id : x) {
-        if (i >= l || opt_id <= this->nb_items) break;
+        if (i >= l) break;
+        if (opt_id <= this->nb_items) continue;
 
         sol.push_back(this->options[opt_id].row_number);
     }
@@ -343,7 +344,17 @@ vector<vector<INT>> DLX::all_solutions(bool verbose) {
 
     vector<vector<INT>> solutions;
 
+    auto ppx = [](vector<INT> x, INT l) {
+        INT i = 0;
+        for (auto& e : x) {
+            if (i++ >= l) break;
+            cout << e << " ";
+        }
+        cout << endl;
+    };
+
     M2: // cout << "M2" << endl;
+        // ppx(x, l);
         if (RLINK(0) == 0) {
             // cout << "====================================================" << endl;
             // cout << "Found solution :" << endl;
@@ -356,18 +367,21 @@ vector<vector<INT>> DLX::all_solutions(bool verbose) {
             goto M9;
         }
     M3: // cout << "M3" << endl;
+        // ppx(x, l);
         i = this->choose();
         // cout << "Choose " << i << endl;
         // cout << "Branch degree " << branch_degree(i) << endl;
         // cout << "BOUND(i) " << BOUND(i) << endl;
         if (branch_degree(i) == 0) goto M9;
     M4: // cout << "M4" << endl;
+        // ppx(x, l);
         x[l] = DLINK(i);
         BOUND(i)--;
         if (BOUND(i) == 0) this->cover(i);
         if (BOUND(i) != 0 || SLACK(i) != 0)
             ft[l] = x[l];
     M5: // cout << "M5" << endl;
+        // ppx(x, l);
         if (BOUND(i) == 0 && SLACK(i) == 0) {
             if (x[l] != i) goto M6;
             else goto M8;
@@ -383,6 +397,7 @@ vector<vector<INT>> DLX::all_solutions(bool verbose) {
             LLINK(q) = p;
         }
     M6: // cout << "M6" << endl;
+        // ppx(x, l);
         if (x[l] != i) {
             p = x[l] + 1;
             while (p != x[l]) {
@@ -401,6 +416,7 @@ vector<vector<INT>> DLX::all_solutions(bool verbose) {
         l++;
         goto M2;
     M7: // cout << "M7" << endl;
+        // ppx(x, l);
         // if (x[l] != i) {
         p = x[l] - 1;
         while (p != x[l]) {
@@ -420,6 +436,7 @@ vector<vector<INT>> DLX::all_solutions(bool verbose) {
         // cout << "x_l " << x[l] << endl;
         goto M5;
     M8: // cout << "M8" << endl;
+        // ppx(x, l);
         // cout << "BOUND(i) " << BOUND(i) << endl;
         // cout << "SLACK(i) " << SLACK(i) << endl;
         if (BOUND(i) == 0 && SLACK(i) == 0)
@@ -430,6 +447,7 @@ vector<vector<INT>> DLX::all_solutions(bool verbose) {
         // cout << "BOUND(i) " << BOUND(i) << endl;
     M9: // cout << "M9" << endl;
         // cout << "M9 - l=" << l << endl;
+        // ppx(x, l);
         if (l == 0) {
             if (verbose) {
                 cout << "---------------------------------" << endl;
