@@ -14,3 +14,6 @@ ${DLX}.so: ${DLX}.o
 	${CC} -shared -static-libstdc++ -o $@ $<
 
 lib: ${DLX}.so
+
+test-python: ${DLX}.so ${DLX}.hpp ${DLX}.py
+	python ${DLX}.py
