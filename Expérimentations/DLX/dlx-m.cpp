@@ -1,5 +1,5 @@
 /**
- * Implémentation de l'algorithme C
+ * Implémentation de l'algorithme M
  * --------------------------------
  * 
  * La description de l'algorithme se trouve dans

@@ -1,4 +1,5 @@
-from typing import List, Tuple, Any, Dict
+from typing import List, Tuple, Any, Dict, Callable, Hashable, Iterator, Union
+from typing_extensions import Protocol
 import cppyy
 
 cppyy.include('dlx-m.hpp')
@@ -10,7 +11,7 @@ _INT = _DLX_M.INT
 _COLOR = _DLX_M.COLOR
 _DLX = _DLX_M.DLX
 _EMPTY_COLOR = 0
-_AbstrItem = _DLX_M.AbstrItem
+_AbstrItem: Any = _DLX_M.AbstrItem
 
 _primary_tpl = _std.make_tuple['DLX_M::AbstrItem*', _INT, _INT]
 _primary_vct = _std.vector[_std.tuple['DLX_M::AbstrItem*', _INT, _INT]]
@@ -43,7 +44,7 @@ def _R(x: List[Tuple[List[_AbstrItem], List[Tuple[_AbstrItem, int]]]]):
     return _row_vct([_row_tpl(_RP(p), _RS(s)) for (p, s) in x])
 
 
-def _new_id_generator():
+def _new_id_generator() -> Callable[[], int]:
     x = -1
 
     def f():
@@ -53,8 +54,13 @@ def _new_id_generator():
     return f
 
 
+class NewId(Protocol):
+    def __call__(self) -> int:
+        pass
+
+
 class ConcItem(_AbstrItem):
-    def set(self, x):
+    def set(self, x: Any):
         self.x = x
 
     def get(self):
@@ -68,19 +74,21 @@ class ConcItem(_AbstrItem):
 
 
 class DLXMVariable():
-    dict: Dict[Any, ConcItem]
+    dict: Dict[Hashable, ConcItem]
+    new_id: NewId  # Callable[[], int]
     lower_bound: int
     upper_bound: int
     secondary: bool
 
-    def __init__(self, id_generator, lower_bound, upper_bound, secondary):
+    def __init__(self, id_generator: Callable[[], int],
+                 lower_bound: int, upper_bound: int, secondary: bool):
         self.dict = {}
         self.new_id = id_generator
         self.lower_bound = lower_bound
         self.upper_bound = upper_bound
         self.secondary = secondary
 
-    def __getitem__(self, x):
+    def __getitem__(self, x: Hashable) -> ConcItem:
         if x not in self.dict:
             id = self.new_id()
             obj = ConcItem()
@@ -88,20 +96,23 @@ class DLXMVariable():
             self.dict[x] = obj
         return self.dict[x]
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[Hashable]:
         return self.dict.__iter__()
 
 
 class DLXM():
+    variables: List[DLXMVariable]
+    new_id: NewId
+    rows: List[Tuple[List[ConcItem], List[Tuple[ConcItem, int]]]]
+
     def __init__(self):
-        self.primary_items = {}
-        self.secondary_items = {}
         self.variables = []
         self.new_id = _new_id_generator()
         self.rows = []
         self.rows_cpp = []
 
-    def new_variable(self, lower_bound=0, upper_bound=1, secondary=False):
+    def new_variable(self, lower_bound: int = 0, upper_bound: int = 1,
+                     secondary: bool = False) -> DLXMVariable:
         x = DLXMVariable(self.new_id, lower_bound, upper_bound, secondary)
         self.variables.append(x)
         return x
@@ -111,13 +122,13 @@ class DLXM():
         self.rows.append((row_primary, row_secondary))
         self.rows_cpp.append((_RP(row_primary), _RS(row_secondary)))
 
-    def row(self, i):
+    def row(self, i: int) -> List[Union[Any, Tuple[Any, int]]]:
         p, s = self.rows[i]
         return [e.get() for e in p] + [(e.get(), c) for (e, c) in s]
 
-    def all_solutions(self, verbose=False):
-        primary_items = []
-        secondary_items = []
+    def all_solutions(self, verbose: bool = False):
+        primary_items: List[Tuple[ConcItem, int, int]] = []
+        secondary_items: List[ConcItem] = []
 
         x: DLXMVariable
         for x in self.variables:
@@ -168,33 +179,33 @@ if __name__ == "__main__":
 
     print("=== TEST 2 ===")
     dlx = DLXM()
-    x = dlx.new_variable(1, 1)
-    dlx.add_row([x[0], x[1]])
-    dlx.add_row([x[0], x[2]])
-    dlx.add_row([x[0]])
-    dlx.add_row([x[1]])
-    dlx.add_row([x[2]])
+    pv = dlx.new_variable(1, 1)
+    dlx.add_row([pv[0], pv[1]])
+    dlx.add_row([pv[0], pv[2]])
+    dlx.add_row([pv[0]])
+    dlx.add_row([pv[1]])
+    dlx.add_row([pv[2]])
     sols = dlx.all_solutions()
     print_solutions(sols)
 
     print("=== TEST 3 ===")
     dlx = DLXM()
-    x = dlx.new_variable(0, 5)
-    dlx.add_row([x[0]])
-    dlx.add_row([x[0]])
-    dlx.add_row([x[0]])
-    dlx.add_row([x[0]])
-    dlx.add_row([x[0]])
+    pv = dlx.new_variable(0, 5)
+    dlx.add_row([pv[0]])
+    dlx.add_row([pv[0]])
+    dlx.add_row([pv[0]])
+    dlx.add_row([pv[0]])
+    dlx.add_row([pv[0]])
     sols = dlx.all_solutions()
     print_solutions(sols)
 
     print("=== TEST 4 ===")
     dlx = DLXM()
-    x = dlx.new_variable(0, 3)
-    dlx.add_row([x[0]])
-    dlx.add_row([x[0]])
-    dlx.add_row([x[0]])
-    dlx.add_row([x[0]])
-    dlx.add_row([x[0]])
+    pv = dlx.new_variable(0, 3)
+    dlx.add_row([pv[0]])
+    dlx.add_row([pv[0]])
+    dlx.add_row([pv[0]])
+    dlx.add_row([pv[0]])
+    dlx.add_row([pv[0]])
     sols = dlx.all_solutions()
     print_solutions(sols)
