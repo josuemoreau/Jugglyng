@@ -422,14 +422,17 @@ def solve_with_dlx(ec_instance: ExactCoverInstance):
                 dlx_row.append(u[item])
         dlx.add_row(dlx_row)
 
-    sols = dlx.all_solutions()
-    sols_selected = []
-    for sol in sols:
-        selected = []
-        for i in sol:
-            selected.append(dlx.row_obj(i))
-        sols_selected.append(selected)
-    return sols, sols_selected
+    sols_selected_rows = dlx.all_solutions()
+    sols = []
+    for selected_rows in sols_selected_rows:
+        rows = []
+        for i in selected_rows:
+            rows.append(dlx.row_obj(i))
+        sols.append(ExactCoverSolution(max_time=ec_instance.max_time,
+                                       nb_hands=ec_instance.nb_hands,
+                                       balls=ec_instance.balls,
+                                       rows=rows))
+    return sols
 
 
 def juggling_sol_to_simulator(sol):
