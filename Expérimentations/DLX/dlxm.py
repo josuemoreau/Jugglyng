@@ -1,9 +1,16 @@
-from typing import List, Tuple, Any, Dict, Callable, Hashable, Iterator, Union
+from typing import List, Tuple, Any, Dict, Callable, Hashable, Iterator, Union, Set
 from typing_extensions import Protocol
 import cppyy
+import os
+
+_dir_path = os.path.dirname(os.path.realpath(__file__))
+_cur_path = os.getcwd()
+os.chdir(_dir_path)
 
 cppyy.include('dlx_m.hpp')
 cppyy.load_library('dlx_m.so')
+
+os.chdir(_cur_path)
 
 _std = cppyy.gbl.std
 _DLX_M = cppyy.gbl.DLX_M
@@ -60,17 +67,21 @@ class NewId(Protocol):
 
 
 class ConcItem(_AbstrItem):
-    def set(self, x: Any):
+    def set(self, repr: Any, x: Any):
         self.x = x
+        self.repr = repr
 
-    def get(self):
+    def get_repr(self):
+        return self.repr
+
+    def get_obj(self):
         return self.x
 
     def str(self):
-        return str(self.x)
+        return str(self.repr)
 
     def print(self):
-        print(self.x, end="", flush=True)
+        print(self.repr, end="", flush=True)
 
 
 class DLXMVariable():
@@ -97,13 +108,13 @@ class DLXMVariable():
         >>> a, b, c = v[0], v['123'], v[0.8]
         >>> a == v[0]
         True
-        >>> a.get(), b.get(), c.get()
+        >>> a.get_repr(), b.get_repr(), c.get_repr()
         ('x_0', 'x_1', 'x_2')
         """
         if x not in self.dict:
             id = self.new_id()
             obj = ConcItem()
-            obj.set('x_' + str(id))
+            obj.set('x_' + str(id), x)
             self.dict[x] = obj
         return self.dict[x]
 
@@ -125,7 +136,7 @@ class DLXMVariable():
         >>> v = DLXMVariable(new_id, 0, 5, False)
         >>> a, b, c = v[0], v['123'], v[0.8]
         >>> lk = [x for x in v]
-        >>> lv = [v[k].get() for k in lk]
+        >>> lv = [v[k].get_repr() for k in lk]
         >>> lk, lv
         ([0, '123', 0.8], ['x_0', 'x_1', 'x_2'])
         """
@@ -178,33 +189,41 @@ class DLXM():
         >>> x.add_row([b], [(c, 0)])
         >>> len(x.rows)
         4
-        >>> [([e.get() for e in p], [(e.get(), c) for (e, c) in s]) for (p, s) in x.rows]
+        >>> [([e.get_repr() for e in p], [(e.get_repr(), c) for (e, c) in s]) for (p, s) in x.rows]
         [(['x_0', 'x_1'], [('x_2', 1)]), (['x_0'], [('x_2', 0)]), (['x_1'], [('x_2', 1)]), (['x_1'], [('x_2', 0)])]
         """
         self.rows.append((row_primary, row_secondary))
         self.rows_cpp.append((_RP(row_primary), _RS(row_secondary)))
 
-    def row(self, i: int) -> List[Union[Any, Tuple[Any, int]]]:
-        """ Renvoie la ligne `i`.
+    def row_repr(self, i: int) -> List[Union[Any, Tuple[Any, int]]]:
+        """ Renvoie la représentation de la ligne `i`.
 
         >>> x = DLXM()
         >>> pv = x.new_variable(lower_bound=0, upper_bound=2)
         >>> sv = x.new_variable(secondary=True)
         >>> a, b = pv[0], sv[0]
         >>> x.add_row([a], [(b, 1)])
-        >>> x.row(0)
+        >>> x.row_repr(0)
         ['x_0', ('x_1', 1)]
         >>> x.add_row([a])
         >>> x.add_row([], [(b, 0)])
-        >>> x.row(0)
+        >>> x.row_repr(0)
         ['x_0', ('x_1', 1)]
-        >>> x.row(2)
+        >>> x.row_repr(2)
         [('x_1', 0)]
         """
         p, s = self.rows[i]
-        return [e.get() for e in p] + [(e.get(), c) for (e, c) in s]
+        return [e.get_repr() for e in p] + [(e.get_repr(), c) for (e, c) in s]
 
-    def all_solutions(self, verbose: bool = False):
+    def row_obj(self, i: int) -> List[Union[Any, Tuple[Any, int]]]:
+        """ Renvoie la ligne `i` avec les objets à la place des noms de
+        variables.
+
+        """
+        p, s = self.rows[i]
+        return [e.get_obj() for e in p] + [(e.get_obj(), c) for (e, c) in s]
+
+    def all_solutions(self, verbose: bool = False) -> List[Set[int]]:
         """ Renvoie toutes les solutions à l'instance de exact cover avec
         multiplicité.
 

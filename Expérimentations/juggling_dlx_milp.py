@@ -1,6 +1,7 @@
 from recordclass import StructClass
 from typing import List, Dict, Tuple, Union, Set
 from sage.all import MixedIntegerLinearProgram
+from DLX.dlxm import DLXM
 
 from pylatex import Document
 from pylatex.utils import NoEscape
@@ -358,6 +359,77 @@ def solve_exact_cover_with_milp(ec_instance: ExactCoverInstance,
                               balls=ec_instance.balls,
                               rows=[ec_instance.rows[i]
                                     for i in selected_rows if selected_rows[i] == 1.0])
+
+
+def dlx_solver_instance(ec_instance: ExactCoverInstance):
+    dlx = DLXM()
+    x = dlx.new_variable(ec_instance.x_items_bounds[0], ec_instance.x_items_bounds[1])
+    l = dlx.new_variable(ec_instance.l_items_bounds[0], ec_instance.l_items_bounds[1])
+    w = dlx.new_variable(ec_instance.w_items_bounds[0], ec_instance.w_items_bounds[1])
+    i = dlx.new_variable(ec_instance.i_items_bounds[0], ec_instance.i_items_bounds[1])
+    m = dlx.new_variable(ec_instance.m_items_bounds[0], ec_instance.m_items_bounds[1])
+    d = dlx.new_variable(ec_instance.d_items_bounds[0], ec_instance.d_items_bounds[1])
+    u = dlx.new_variable(ec_instance.u_items_bounds[0], ec_instance.u_items_bounds[1])
+
+    for row in ec_instance.rows:
+        dlx_row = []
+        for item in row:
+            if isinstance(item, XItem):
+                dlx_row.append(x[item])
+            elif isinstance(item, LItem):
+                dlx_row.append(l[item])
+            elif isinstance(item, WItem):
+                dlx_row.append(w[item])
+            elif isinstance(item, IItem):
+                dlx_row.append(i[item])
+            elif isinstance(item, MItem):
+                dlx_row.append(m[item])
+            elif isinstance(item, DItem):
+                dlx_row.append(d[item])
+            elif isinstance(item, UItem):
+                dlx_row.append(u[item])
+        dlx.add_row(dlx_row)
+
+    return dlx
+
+
+def solve_with_dlx(ec_instance: ExactCoverInstance):
+    dlx = DLXM()
+    x = dlx.new_variable(ec_instance.x_items_bounds[0], ec_instance.x_items_bounds[1])
+    l = dlx.new_variable(ec_instance.l_items_bounds[0], ec_instance.l_items_bounds[1])
+    w = dlx.new_variable(ec_instance.w_items_bounds[0], ec_instance.w_items_bounds[1])
+    i = dlx.new_variable(ec_instance.i_items_bounds[0], ec_instance.i_items_bounds[1])
+    m = dlx.new_variable(ec_instance.m_items_bounds[0], ec_instance.m_items_bounds[1])
+    d = dlx.new_variable(ec_instance.d_items_bounds[0], ec_instance.d_items_bounds[1])
+    u = dlx.new_variable(ec_instance.u_items_bounds[0], ec_instance.u_items_bounds[1])
+
+    for row in ec_instance.rows:
+        dlx_row = []
+        for item in row:
+            if isinstance(item, XItem):
+                dlx_row.append(x[item])
+            elif isinstance(item, LItem):
+                dlx_row.append(l[item])
+            elif isinstance(item, WItem):
+                dlx_row.append(w[item])
+            elif isinstance(item, IItem):
+                dlx_row.append(i[item])
+            elif isinstance(item, MItem):
+                dlx_row.append(m[item])
+            elif isinstance(item, DItem):
+                dlx_row.append(d[item])
+            elif isinstance(item, UItem):
+                dlx_row.append(u[item])
+        dlx.add_row(dlx_row)
+
+    sols = dlx.all_solutions()
+    sols_selected = []
+    for sol in sols:
+        selected = []
+        for i in sol:
+            selected.append(dlx.row_obj(i))
+        sols_selected.append(selected)
+    return sols, sols_selected
 
 
 def juggling_sol_to_simulator(sol):
