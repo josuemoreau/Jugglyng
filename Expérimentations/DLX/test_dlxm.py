@@ -5,7 +5,7 @@ def print_solutions(sols):
     for sol in sols:
         print("Solution", sol, ":")
         for i in sol:
-            for e in dlx.row(i):
+            for e in dlx.row_repr(i):
                 if type(e) == tuple:
                     print(e[0] + ":" + str(e[1]), end=" ")
                 else:
