@@ -361,7 +361,7 @@ def solve_exact_cover_with_milp(ec_instance: ExactCoverInstance,
                                     for i in selected_rows if selected_rows[i] == 1.0])
 
 
-def dlx_solver_instance(ec_instance: ExactCoverInstance):
+def dlx_solver_instance(ec_instance: ExactCoverInstance) -> DLXM:
     dlx = DLXM()
     x = dlx.new_variable(ec_instance.x_items_bounds[0], ec_instance.x_items_bounds[1])
     l = dlx.new_variable(ec_instance.l_items_bounds[0], ec_instance.l_items_bounds[1])
@@ -393,7 +393,7 @@ def dlx_solver_instance(ec_instance: ExactCoverInstance):
     return dlx
 
 
-def solve_with_dlx(ec_instance: ExactCoverInstance):
+def solve_with_dlx(ec_instance: ExactCoverInstance) -> List[ExactCoverSolution]:
     dlx = DLXM()
     x = dlx.new_variable(ec_instance.x_items_bounds[0], ec_instance.x_items_bounds[1])
     l = dlx.new_variable(ec_instance.l_items_bounds[0], ec_instance.l_items_bounds[1])

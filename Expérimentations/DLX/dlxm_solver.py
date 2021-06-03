@@ -27,8 +27,8 @@ if __name__ == "__main__":
                 exit(1)
         else:
             secondary_vars.append(p)
-    print(primary_vars)
-    print(secondary_vars)
+    print("primary :", primary_vars)
+    print("secondary :", secondary_vars)
 
     dlx = DLXM()
     d_primary = {}
