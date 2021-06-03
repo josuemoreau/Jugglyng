@@ -1,4 +1,4 @@
-from dlx_m import DLXM
+from dlxm import DLXM
 
 
 def print_solutions(sols):

@@ -1,4 +1,4 @@
-#include "dlx-m.hpp"
+#include "dlx_m.hpp"
 #include <iostream>
 #include <string>
 

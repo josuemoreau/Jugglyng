@@ -6,7 +6,7 @@
  * The Art of Computer Programming, Volume 4, Fascicule 5
  */
 
-#include "dlx-m.hpp"
+#include "dlx_m.hpp"
 
 #include <iostream>
 #include <string>

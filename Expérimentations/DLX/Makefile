@@ -1,8 +1,9 @@
 CC:=g++
-DLX:=dlx-m
+DLX:=dlx_m
+PYDLX:=dlxm
 
-${DLX}: ${DLX}.hpp ${DLX}.cpp test-${DLX}.cpp
-	${CC} -o $@ ${DLX}.cpp test-${DLX}.cpp
+${DLX}: ${DLX}.hpp ${DLX}.cpp test_${DLX}.cpp
+	${CC} -o $@ ${DLX}.cpp test_${DLX}.cpp
 
 test: ${DLX}
 	./${DLX}
@@ -15,5 +16,8 @@ ${DLX}.so: ${DLX}.o
 
 lib: ${DLX}.so
 
-test-python: ${DLX}.so ${DLX}.hpp ${DLX}.py
-	python ${DLX}.py
+doctest-python: ${DLX}.so ${DLX}.hpp ${PYDLX}.py
+	python -m doctest ${PYDLX}.py
+
+test-python: ${DLX}.so ${DLX}.hpp ${PYDLX}.py doctest-python
+	python test_${PYDLX}.py
