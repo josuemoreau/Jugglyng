@@ -81,7 +81,7 @@ class Model:
 
         for number, ball_prop in enumerate(ball_properties):
             if "tone" in ball_prop:
-                tone = "../../sounds/{}.wav".format(ball_prop["tone"])
+                tone = "../../sounds2/{}.wav".format(ball_prop["tone"])
             else:
                 tone = None
             if "color" in ball_prop:
