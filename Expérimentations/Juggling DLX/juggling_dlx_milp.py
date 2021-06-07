@@ -281,7 +281,7 @@ def throws_to_extended_exact_cover(balls: Set[str], throws: List[List[Throw]],
 def solve_exact_cover_with_milp(ec_instance: ExactCoverInstance,
                                 optimize: bool = False) \
         -> ExactCoverSolution:
-    p = MixedIntegerLinearProgram(maximization=False)
+    p = MixedIntegerLinearProgram(maximization=True)
 
     # Calcul, pour chaque colonne, des lignes qui ont un élément dans cette
     # colonne
@@ -299,11 +299,20 @@ def solve_exact_cover_with_milp(ec_instance: ExactCoverInstance,
     # variables D(t, m)
     d_expr = {}
 
+    max_expr = 0
+    min_expr = 0
+    min_high = 0
+
     # Génération de l'instance de MILP
     x = p.new_variable(binary=True)
     for item in ec_instance.x_items:
         if len(d[item]) > 0:
             rows_vars = [x[i] for i in d[item]]
+            if item.flying_time in {3, 4, 5}:  # Maximisation des lancers 3/4/5
+                max_expr += sum(rows_vars)
+            elif item.flying_time in {6, 7}:  # Minimisation des lancers 6/7
+                min_expr += sum(rows_vars)
+                min_high += len(rows_vars)
             p.add_constraint(ec_instance.x_items_bounds[0]
                              <= sum(rows_vars)
                              <= ec_instance.x_items_bounds[1])
@@ -350,14 +359,19 @@ def solve_exact_cover_with_milp(ec_instance: ExactCoverInstance,
                              <= ec_instance.u_items_bounds[1])
 
     if optimize:
-        a = p.new_variable(binary=True)
-        for t in range(ec_instance.max_time + 1):
-            sum_dvar = 0
-            for h in range(ec_instance.nb_hands):
-                dvar = d_expr[(t, h)]
-                sum_dvar += dvar
-            p.add_constraint(a[t] >= (sum_dvar - 1) / ec_instance.nb_hands)
-        p.set_objective(sum([a[t] for t in range(ec_instance.max_time + 1)]))
+        # Minimisation du nombre de lancers en même temps depuis des mains
+        # différentes
+        # a = p.new_variable(binary=True)
+        # for t in range(ec_instance.max_time + 1):
+        #     sum_dvar = 0
+        #     for h in range(ec_instance.nb_hands):
+        #         dvar = d_expr[(t, h)]
+        #         sum_dvar += dvar
+        #     p.add_constraint(a[t] >= (sum_dvar - 1) / ec_instance.nb_hands)
+        # p.set_objective(sum([a[t] for t in range(ec_instance.max_time + 1)]))
+
+        # Optimisation du score lié au jonglage
+        p.set_objective(max_expr + min_high - min_expr)
 
     # Résolution
     p.solve()
