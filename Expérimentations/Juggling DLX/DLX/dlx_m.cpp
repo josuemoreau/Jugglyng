@@ -249,7 +249,7 @@ void DLX::untweak_special(vector<INT> &ft, INT l) {
 
 INT DLX::choose() {
     INT i = this->items[0].rlink;
-    return i;
+    // return i;
     INT p;
 
     for (p = i; p != 0; p = this->items[p].rlink)
