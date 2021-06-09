@@ -39,6 +39,8 @@ $$
   - il est difficile de faire sonner un lancer de 2 (il suffit d’interdire le lancer multiplex {2})
   - il est préférable de privilégier des lancers de 3/4/5 (plus esthétiques) dans les figures et éviter les lancers de 2
 
+# Idées
+
 ## Fonction objectif pour MILP
 
 ### On autorise les lancers de hauteur 6/7 mais on veut en minimiser le nombre
@@ -61,7 +63,7 @@ On pourrait introduire de nouvelles variables $y_{T(t, b, \hmax)}^{m, h}$.
 
 On introduit :
 
-- De nouvelles variables :
+- De nouvelles variables secondaires :
   - $C_{t}$ pour tout temps $t$.
   - $B_{b, t}$ pour toute balle $b$ et temps $t$.
 
@@ -86,3 +88,29 @@ On introduit :
   
 
 La première règle permet que, quelque soit la configuration de la main avant de lancer la balle $b$ à l'instant $t + \hmax - h$, la balle $b$ est dans la main $m$ en position $1$. La seconde règle impose aux lancers de correspondre à la configuration car, dans le cas contraire, deux couleurs serait affectées à une même colonne. La troisième règle assure une cohérence dans la suite des configurations construites.
+
+## Modifications sur l'algorithme M
+
+Supposons $f$ une fonction de score d'une solution partielle. $f$ est telle que si $x'$ est la solution $x$ avec un choix supplémentaire à la fin, $0 \leq f(x') - f(x) \leq \frac{1}{n}$. On veut modifier l'algorithme M afin qu'il corresponde au schéma suivant :
+
+1. $n \leftarrow $ majorant de la hauteur de l'arbre de recherche.
+
+   $r \leftarrow n$.
+
+2. Tant que ...
+
+   1. $s$ est le score actuel de $x$.
+
+   2. choisir la ligne $j$ pour la colonne $i$.
+
+   3. $s \leftarrow f(x + i)$.
+      $r \leftarrow r - 1$.
+
+   4. Si $s + \frac{r}{n} < s_{\text{max}}$ : On annule le choix de la ligne $j$ et on choisira au prochain tour de boucle une autre ligne $j$ pour la colonne $i$.
+
+      Sinon si on a une solution complète et $s > s_{\text{max}}$ alors $s_{\text{max}} \leftarrow s$.
+
+      Sinon on continue la recherche de solution.
+
+Ces modification semblent pouvoir être appliquées au début de l'étape M6, en première opération dans le If $x_l \neq i$. Ce que l'on appelle $j$ ci-dessus serait $x_l$.
+
