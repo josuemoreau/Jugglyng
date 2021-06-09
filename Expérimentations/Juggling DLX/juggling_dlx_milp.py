@@ -1,15 +1,57 @@
 from recordclass import StructClass
-from typing import List, Dict, Tuple, Union, Set
-from sage.all import MixedIntegerLinearProgram
+from typing import List, Dict, Tuple, Union, Set, Any
+from sage.all import MixedIntegerLinearProgram, OrderedSetPartitions, \
+    cartesian_product, Arrangements
 from DLX.dlxm import DLXM
 
 from pylatex import Document
 from pylatex.utils import NoEscape
 
-# musique = [( 1, "do"), ( 2, "do"), ( 3, "do"),
-#            ( 4, "ré"), ( 5, "mi"), ( 7, "ré"),
-#            ( 9, "do"), (10, "mi"), (11, "ré"),
-#            (12, "ré"), (13, "do")]
+
+def InsertAtEachPosition(l, e):
+    for i in range(0, len(l) + 1):
+        l1 = l.copy()
+        l1.insert(i, e)
+        yield l1
+
+
+def EmpOrderedSetPartitions(s, k):
+    for p in OrderedSetPartitions(s, k):
+        yield p
+    for i in range(k - 1, 0, -1):
+        P = OrderedSetPartitions(s, i)
+        for p in P:
+            L = [list(p)]
+            for j in range(0, k - i):
+                L1 = []
+                for pl in L:
+                    e = set()
+                    l1 = list(InsertAtEachPosition(pl, e))
+                    L1 = L1 + l1
+                L = L1
+            for l in L:
+                yield l
+
+
+def HandsConfigurations(balls, nb_hands):
+    L = []
+    for p in EmpOrderedSetPartitions(balls, nb_hands):
+        L += list(cartesian_product([Arrangements(s, len(s)) for s in p]))
+    return L
+
+
+def next_configs(config):
+    hands_next_configs = [[] for _ in range(len(config))]
+    for hand in range(len(config)):
+        n = len(config[hand])
+        ch = config[hand]
+        if n <= 1 or n == 4:
+            hands_next_configs[hand].append(tuple(ch))
+        elif n == 2 or n == 3:
+            hands_next_configs[hand].append(tuple([ch[(i + 1) % n] for i in range(n)]))
+        else:
+            hands_next_configs[hand].append(tuple(ch))
+    return list(cartesian_product(hands_next_configs))
 
 
 class Throw(StructClass):
@@ -134,6 +176,28 @@ class UItem(StructClass):
                                  "{" + str(self.hand) + "}")
 
 
+class BItem(StructClass):
+    ball: str
+    time: int
+
+    def __hash__(self):
+        return hash(str(self))
+
+    def latex(self):
+        return r"B_{}^{}".format("{" + self.ball + "}",
+                                 "{" + str(self.time) + "}")
+
+
+class CItem(StructClass):
+    time: int
+
+    def __hash__(self):
+        return hash(str(self))
+
+    def latex(self):
+        return r"C_{}".format("{" + str(self.time) + "}")
+
+
 class ExactCoverInstance(StructClass):
     max_time: int = 0
     nb_hands: int = 1
@@ -147,6 +211,9 @@ class ExactCoverInstance(StructClass):
     d_items: List[DItem] = []
     u_items: List[UItem] = []
 
+    b_items: List[BItem] = []
+    c_items: List[CItem] = []
+
     x_items_bounds: Tuple[int, int] = (0, 1)
     l_items_bounds: Tuple[int, int] = (1, 1)
     w_items_bounds: Tuple[int, int] = (0, 1)
@@ -155,7 +222,9 @@ class ExactCoverInstance(StructClass):
     d_items_bounds: Tuple[int, int] = (0, 1)
     u_items_bounds: Tuple[int, int] = (0, 1)
 
-    rows: List[List[Union[XItem, LItem, WItem, IItem, MItem, DItem, UItem]]] = []
+    rows: List[List[Union[XItem, LItem, WItem, IItem, MItem, DItem, UItem,
+                          Tuple[BItem, Any],
+                          Tuple[CItem, Tuple[int, int]]]]] = []
 
 
 class ExactCoverSolution(StructClass):
@@ -163,7 +232,9 @@ class ExactCoverSolution(StructClass):
     nb_hands: int = 1
     balls: Set[str] = set()
 
-    rows: List[List[Union[XItem, LItem, WItem, IItem, MItem, DItem, UItem]]] = []
+    rows: List[List[Union[XItem, LItem, WItem, IItem, MItem, DItem, UItem,
+                          Tuple[BItem, Any],
+                          Tuple[CItem, Tuple[int, int]]]]] = []
 
 
 def throws_to_extended_exact_cover(balls: Set[str], throws: List[List[Throw]],
@@ -181,6 +252,9 @@ def throws_to_extended_exact_cover(balls: Set[str], throws: List[List[Throw]],
     m_items_bounds = {}
     d_items = {}
     u_items = {}
+    b_items = {}
+    c_items = {}
+    colors = {}
     fmultiplex: Dict[int, List[Tuple[int, ]]] = {i: [] for i in range(1, H + 1)}
     fflying_time = []
     f2seqs: Dict[int, List[int]] = {i: [] for i in range(1, H + 1)}
@@ -237,6 +311,23 @@ def throws_to_extended_exact_cover(balls: Set[str], throws: List[List[Throw]],
             for flying_time in range(1, H + 1):
                 i = IItem(time=t, hand=hand, flying_time=flying_time)
                 i_items[(t, hand, flying_time)] = i
+    # Génération des items B et C
+    for t in range(len(throws)):
+        for ball in balls:
+            b = BItem(time=t, ball=ball)
+            b_items[(ball, t)] = b
+        c = CItem(time=t)
+        c_items[t] = c
+    # Génération des couleurs
+    k = 0
+    for hand in range(nb_hands):
+        for i in range(1, K + 1):
+            colors[(hand, i)] = k
+            k += 1
+    hands_configs = HandsConfigurations(balls, nb_hands)
+    for p in hands_configs:
+        colors[p] = k
+        k += 1
     # Génération des lignes
     for t in range(len(throws)):
         for throw in throws[t]:
@@ -261,7 +352,17 @@ def throws_to_extended_exact_cover(balls: Set[str], throws: List[List[Throw]],
                         row.append(u_items[(throw.ball,
                                             throw.time + throw.max_height,
                                             hand)])
+                    row.append((BItem(ball=throw.ball,
+                                      time=t + throw.max_height - flying_time),
+                                colors[(hand, 1)]))
                     rows.append(row)
+    for t in range(len(throws)):
+        for p in hands_configs:
+            row = [(c_items[t], colors[p])]
+            for hand in range(len(p)):
+                for i in range(len(p[hand])):
+                    row.append((b_items[(p[hand][i], t)], colors[(hand, i + 1)]))
+            rows.append(row)
 
     return ExactCoverInstance(x_items=list(x_items.values()),
                               l_items=list(l_items.values()),
@@ -270,6 +371,8 @@ def throws_to_extended_exact_cover(balls: Set[str], throws: List[List[Throw]],
                               m_items=list(m_items.values()),
                               d_items=list(d_items.values()),
                               u_items=list(u_items.values()),
+                              b_items=list(b_items.values()),
+                              c_items=list(c_items.values()),
                               w_items_bounds=(0, K),
                               m_items_bounds=m_items_bounds,
                               rows=rows,
@@ -285,7 +388,10 @@ def solve_exact_cover_with_milp(ec_instance: ExactCoverInstance,
 
     # Calcul, pour chaque colonne, des lignes qui ont un élément dans cette
     # colonne
-    d: Dict[Union[XItem, LItem, WItem, IItem, MItem, DItem, UItem], List[int]] \
+    d: Dict[Union[XItem, LItem, WItem, IItem, MItem, DItem, UItem,
+                  Tuple[BItem, Any],
+                  Tuple[CItem, Tuple[int, int]]],
+            List[int]] \
         = {item: [] for item in ec_instance.x_items + ec_instance.l_items
             + ec_instance.w_items + ec_instance.i_items
             + ec_instance.m_items + ec_instance.d_items
@@ -392,33 +498,42 @@ def dlx_solver_instance(ec_instance: ExactCoverInstance) -> DLXM:
     i = dlx.new_variable(ec_instance.i_items_bounds[0], ec_instance.i_items_bounds[1])
     d = dlx.new_variable(ec_instance.d_items_bounds[0], ec_instance.d_items_bounds[1])
     u = dlx.new_variable(ec_instance.u_items_bounds[0], ec_instance.u_items_bounds[1])
+    c = dlx.new_variable(secondary=True)
+    b = dlx.new_variable(secondary=True)
 
     m = {}
     m_vars = {}
-    for item in ec_instance.m_items:
-        bounds = ec_instance.m_items_bounds[item.multiplex]
+    for mit in ec_instance.m_items:
+        bounds = ec_instance.m_items_bounds[mit.multiplex]
         if bounds not in m_vars:
             m_vars[bounds] = dlx.new_variable(bounds[0], bounds[1])
-        m[item] = m_vars[bounds][item]
+        m[mit] = m_vars[bounds][mit]
 
     for row in ec_instance.rows:
-        dlx_row = []
+        row_primary = []
+        row_secondary = []
         for item in row:
             if isinstance(item, XItem):
-                dlx_row.append(x[item])
+                row_primary.append(x[item])
             elif isinstance(item, LItem):
-                dlx_row.append(l[item])
+                row_primary.append(l[item])
             elif isinstance(item, WItem):
-                dlx_row.append(w[item])
+                row_primary.append(w[item])
             elif isinstance(item, IItem):
-                dlx_row.append(i[item])
+                row_primary.append(i[item])
             elif isinstance(item, MItem):
-                dlx_row.append(m[item])
+                row_primary.append(m[item])
             elif isinstance(item, DItem):
-                dlx_row.append(d[item])
+                row_primary.append(d[item])
             elif isinstance(item, UItem):
-                dlx_row.append(u[item])
-        dlx.add_row(dlx_row)
+                row_primary.append(u[item])
+            else:
+                it, clr = item
+                if isinstance(it, BItem):
+                    row_secondary.append((b[it], clr))
+                elif isinstance(it, CItem):
+                    row_secondary.append((c[it], clr))
+        dlx.add_row(row_primary, row_secondary)
 
     return dlx
 
@@ -431,33 +546,42 @@ def solve_with_dlx(ec_instance: ExactCoverInstance) -> List[ExactCoverSolution]:
     i = dlx.new_variable(ec_instance.i_items_bounds[0], ec_instance.i_items_bounds[1])
     d = dlx.new_variable(ec_instance.d_items_bounds[0], ec_instance.d_items_bounds[1])
     u = dlx.new_variable(ec_instance.u_items_bounds[0], ec_instance.u_items_bounds[1])
+    c = dlx.new_variable(secondary=True)
+    b = dlx.new_variable(secondary=True)
 
     m = {}
     m_vars = {}
-    for item in ec_instance.m_items:
-        bounds = ec_instance.m_items_bounds[item.multiplex]
+    for mit in ec_instance.m_items:
+        bounds = ec_instance.m_items_bounds[mit.multiplex]
         if bounds not in m_vars:
             m_vars[bounds] = dlx.new_variable(bounds[0], bounds[1])
-        m[item] = m_vars[bounds][item]
+        m[mit] = m_vars[bounds][mit]
 
     for row in ec_instance.rows:
-        dlx_row = []
+        row_primary = []
+        row_secondary = []
         for item in row:
             if isinstance(item, XItem):
-                dlx_row.append(x[item])
+                row_primary.append(x[item])
             elif isinstance(item, LItem):
-                dlx_row.append(l[item])
+                row_primary.append(l[item])
             elif isinstance(item, WItem):
-                dlx_row.append(w[item])
+                row_primary.append(w[item])
             elif isinstance(item, IItem):
-                dlx_row.append(i[item])
+                row_primary.append(i[item])
             elif isinstance(item, MItem):
-                dlx_row.append(m[item])
+                row_primary.append(m[item])
             elif isinstance(item, DItem):
-                dlx_row.append(d[item])
+                row_primary.append(d[item])
             elif isinstance(item, UItem):
-                dlx_row.append(u[item])
-        dlx.add_row(dlx_row)
+                row_primary.append(u[item])
+            else:
+                it, clr = item
+                if isinstance(it, BItem):
+                    row_secondary.append((b[it], clr))
+                elif isinstance(it, CItem):
+                    row_secondary.append((c[it], clr))
+        dlx.add_row(row_primary, row_secondary)
 
     sols_selected_rows = dlx.all_solutions()
     sols = []
