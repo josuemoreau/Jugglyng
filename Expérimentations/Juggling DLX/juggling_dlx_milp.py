@@ -36,7 +36,8 @@ def EmpOrderedSetPartitions(s, k):
 def HandsConfigurations(balls, nb_hands):
     L = []
     for p in EmpOrderedSetPartitions(balls, nb_hands):
-        L += list(cartesian_product([Arrangements(s, len(s)) for s in p]))
+        for config in cartesian_product([Arrangements(s, len(s)) for s in p]):
+            L.append(tuple([tuple(hand_config) for hand_config in config]))
     return L
 
 
@@ -51,7 +52,7 @@ def next_configs(config):
             hands_next_configs[hand].append(tuple([ch[(i + 1) % n] for i in range(n)]))
         else:
             hands_next_configs[hand].append(tuple(ch))
-    return list(cartesian_product(hands_next_configs))
+    return [tuple([tuple(hand_config) for hand_config in config]) for config in cartesian_product(hands_next_configs)]
 
 
 class Throw(StructClass):
@@ -362,7 +363,11 @@ def throws_to_extended_exact_cover(balls: Set[str], throws: List[List[Throw]],
             for hand in range(len(p)):
                 for i in range(len(p[hand])):
                     row.append((b_items[(p[hand][i], t)], colors[(hand, i + 1)]))
-            rows.append(row)
+            if t == len(throws) - 1:
+                rows.append(row)
+            else:
+                for config in next_configs(p):
+                    rows.append(row + [(c_items[t + 1], colors[config])])
 
     return ExactCoverInstance(x_items=list(x_items.values()),
                               l_items=list(l_items.values()),
