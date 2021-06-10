@@ -61,6 +61,8 @@ On pourrait introduire de nouvelles variables $y_{T(t, b, \hmax)}^{m, h}$.
 
 ## Codage des contraintes sur les mains avec Exact Cover
 
+### Première version
+
 On introduit :
 
 - De nouvelles variables secondaires :
@@ -88,6 +90,78 @@ On introduit :
   
 
 La première règle permet que, quelque soit la configuration de la main avant de lancer la balle $b$ à l'instant $t + \hmax - h$, la balle $b$ est dans la main $m$ en position $1$. La seconde règle impose aux lancers de correspondre à la configuration car, dans le cas contraire, deux couleurs serait affectées à une même colonne. La troisième règle assure une cohérence dans la suite des configurations construites.
+
+**Problème :** Ce n'est pas une bonne idée, il y a un nombre exponentiel de configurations de mains. Avec 10 balles et 4 mais ce nombre est déjà bien trop grand pour être calculé efficacement.
+
+### Seconde version
+
+On introduit :
+
+- De nouvelles variables primaires :
+
+  - $B_{b, t} \in \{1\}$ pour tout temps $t$ et toute balle $b$.
+
+- De nouvelles variables secondaires :
+
+  - $P_{t, m, i}$ pour tout temps $t$, main $m$ et position $i$.
+
+- De nouvelles couleurs :
+
+  - $b$ pour toute balle $b$.
+
+- Les règles :
+  $$
+  x_{T(t, b, \hmax)}^{m, h} \Rightarrow P_{t + \hmax - h, m, 1} : b
+  $$
+
+  $$
+  P_{t, m, i} : b \Rightarrow P_{t + 1, m, (i - 1) \% K} : b
+  $$
+
+  $$
+  P_{t, m, i} : b \Rightarrow P_{t + 1, m', i} : b \text{ pour toute position } i \text{ et } m' \neq m
+  $$
+
+  $$
+  P_{t, m, i} : b \Rightarrow B_{b, t}
+  $$
+
+La dernière règle impose de choisir exactement un emplacement pour chaque balle à chaque instant.
+
+### Troisième version
+
+On introduit :
+
+- De nouvelles variables primaires :
+
+  - $B_{b, t} \in \{1\}$ pour tout temps $t$ et toute balle $b$.
+
+- De nouvelles variables secondaires :
+
+  - $P_{b, t}$ pour tout temps $t$ et balle $b$.
+
+- De nouvelles couleurs :
+
+  - $(m, i)$ pour toute main $m$ et position $i$.
+
+- Les règles :
+  $$
+  x_{T(t, b, \hmax)}^{m, h} \Rightarrow P_{b, t + \hmax - h} : (m, 1)
+  $$
+
+  $$
+  x_{T(t, b, \hmax)}^{m, h} \Rightarrow B_{b, t'} \text{ pour tout } t \text{ tel que } t + \hmax - h < t' < t + \hmax
+  $$
+
+  $$
+  P_{b, t} : (m, i) \Rightarrow P_{t + 1, b} : (m, (i - 1) \% K)
+  $$
+
+  $$
+  P_{b, t} : (m, i) \Rightarrow B_{b, t}
+  $$
+
+
 
 ## Modifications sur l'algorithme M
 
