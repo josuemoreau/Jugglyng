@@ -231,11 +231,16 @@ class BallTracker():
         self.halt_foo = self._stop_data
         self.halt_args = dict()
 
-    def _start_data(self, path=None): #MODE VIDEO A ACCELERER !/A CONFIGURER CORRECTEMENT QUAND TRACK
-        #Mieux gérer cas ou pas de path avec webcam
+    def _start_data(self, path=None): 
         if self.save_tracking:
             print("Tracking déjà en cours.")
             return
+
+        #On reset les données des balles
+        for ball in self.balls.values():
+            ball.data = dict()
+
+        #On définit toutes les variables qu'il faut.
         self.mode = Mode.BALL_TRACKER
         self.save_tracking = True
         if self.vp.paused:
@@ -395,7 +400,9 @@ class BallTracker():
             ball.trail.appendleft(center)
             
             if self.save_tracking and not self.vp.paused:
-                if center is not None:
+                if center is None:
+                    ball.data[video_time] = (float('nan'), float('nan'))
+                else:
                     ball.data[video_time] = center
             
             # loop over the set of tracked points
