@@ -471,3 +471,131 @@ vector<vector<INT>> DLX::all_solutions(bool verbose) {
             goto M7;
         }
 }
+
+vector<INT> DLX::get_solution() {
+    vector<INT> x(this->options.size());
+    vector<INT> ft(this->options.size());
+    INT l = 0;
+    INT i, p, j, q;
+
+    auto ppx = [](vector<INT> x, INT l) {
+        INT i = 0;
+        for (auto& e : x) {
+            if (i++ >= l) break;
+            cout << e << " ";
+        }
+        cout << endl;
+    };
+
+    M2: // cout << "M2" << endl;
+        // ppx(x, l);
+        if (RLINK(0) == 0) {
+            // cout << "====================================================" << endl;
+            // cout << "Found solution :" << endl;
+            // this->print_solution(x, l, pp);
+            vector<INT> sol = this->solution_rows(x, l);
+            // this->print_solution(sol);
+            return sol;
+            // cout << "====================================================" << endl;
+            goto M9;
+        }
+    M3: // cout << "M3" << endl;
+        // ppx(x, l);
+        i = this->choose();
+        // cout << "Choose " << i << endl;
+        // cout << "Branch degree " << branch_degree(i) << endl;
+        // cout << "BOUND(i) " << BOUND(i) << endl;
+        if (branch_degree(i) == 0) goto M9;
+    M4: // cout << "M4" << endl;
+        // ppx(x, l);
+        x[l] = DLINK(i);
+        BOUND(i)--;
+        if (BOUND(i) == 0) this->cover(i);
+        if (BOUND(i) != 0 || SLACK(i) != 0)
+            ft[l] = x[l];
+    M5: // cout << "M5" << endl;
+        // ppx(x, l);
+        if (BOUND(i) == 0 && SLACK(i) == 0) {
+            if (x[l] != i) goto M6;
+            else goto M8;
+        } else if (LEN(i) <= BOUND(i) - SLACK(i)) {
+            goto M8;
+        } else if (x[l] != i) {
+            if (BOUND(i) == 0) this->tweak_special(x[l], i);
+            else this->tweak(x[l], i);
+        } else if (BOUND(i) != 0) {
+            p = LLINK(i);
+            q = RLINK(i);
+            RLINK(p) = q;
+            LLINK(q) = p;
+        }
+    M6: // cout << "M6" << endl;
+        // ppx(x, l);
+        if (x[l] != i) {
+            p = x[l] + 1;
+            while (p != x[l]) {
+                j = TOP(p);
+                if (j <= 0) p = ULINK(p);
+                else if (j <= this->nb_primary) {
+                    BOUND(j)--;
+                    p++;
+                    if (BOUND(j) == 0) this->cover(j);
+                } else {
+                    this->commit(p, j);
+                    p++;
+                }
+            }
+        }
+        l++;
+        goto M2;
+    M7: // cout << "M7" << endl;
+        // ppx(x, l);
+        // if (x[l] != i) {
+        p = x[l] - 1;
+        while (p != x[l]) {
+            j = TOP(p);
+            if (j <= 0) p = DLINK(p);
+            else if (j <= this->nb_primary) {
+                BOUND(j)++;
+                p--;
+                if (BOUND(j) == 1) this->uncover(j);
+            } else {
+                this->uncommit(p, j);
+                p--;
+            }
+        }
+        // }
+        x[l] = DLINK(x[l]);
+        // cout << "x_l " << x[l] << endl;
+        goto M5;
+    M8: // cout << "M8" << endl;
+        // ppx(x, l);
+        // cout << "BOUND(i) " << BOUND(i) << endl;
+        // cout << "SLACK(i) " << SLACK(i) << endl;
+        if (BOUND(i) == 0 && SLACK(i) == 0)
+            this->uncover(i);
+        else if (BOUND(i) == 0) this->untweak_special(ft, l);
+        else this->untweak(ft, l);
+        BOUND(i)++;
+        // cout << "BOUND(i) " << BOUND(i) << endl;
+    M9: // cout << "M9" << endl;
+        // cout << "M9 - l=" << l << endl;
+        // ppx(x, l);
+        if (l == 0) {
+            return {};
+        } else l--;
+        // cout << "M9 - l=" << l << endl;
+        // cout << "x_l " << x[l] << endl;
+        // cout << "N " << this->nb_items << endl;
+        if (x[l] <= this->nb_items) {
+            i = x[l];
+            p = LLINK(i);
+            q = RLINK(i);
+            RLINK(p) = i;
+            LLINK(q) = i;
+            goto M8;
+        } else {
+            i = TOP(x[l]);
+            goto M7;
+        }
+}

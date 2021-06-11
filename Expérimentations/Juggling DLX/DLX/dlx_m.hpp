@@ -80,6 +80,7 @@ class DLX {
                      vector<tuple<AbstrItem*, COLOR>> row_secondary);
         
         vector<vector<INT>> all_solutions(bool verbose = false);
+        vector<INT> get_solution();
 
         vector<INT> solution_rows(vector<INT> x, INT l);
 

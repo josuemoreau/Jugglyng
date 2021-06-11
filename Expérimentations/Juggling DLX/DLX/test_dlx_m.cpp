@@ -122,6 +122,27 @@ void test5() {
     dlx.all_solutions(true);
 }
 
+void test6() {
+    Conc *a = new Conc("a");
+    Conc *b = new Conc("b");
+    Conc *c = new Conc("c");
+
+    vector<tuple<AbstrItem*, INT, INT>> primary = {
+        make_tuple(a, 1, 1),
+        make_tuple(b, 1, 1)
+    };
+
+    DLX dlx(primary, {c}, {});
+    dlx.add_row({a}, {make_tuple(c, 0)});
+    dlx.add_row({a}, {make_tuple(c, 3)});
+    dlx.add_row({b}, {make_tuple(c, 0)});
+    dlx.add_row({b}, {make_tuple(c, 3)});
+
+    dlx.print_table();
+
+    dlx.all_solutions(true);
+}
+
 int main(int argc, char** argv) {
     // cout << "======== TEST 1 ========" << endl;
     // test1();
@@ -131,8 +152,10 @@ int main(int argc, char** argv) {
     // test3();
     // cout << "======== TEST 4 ========" << endl;
     // test4();
-    cout << "======== TEST 5 ========" << endl;
-    test5();
+    // cout << "======== TEST 5 ========" << endl;
+    // test5();
+    cout << "======== TEST 6 ========" << endl;
+    test6();
 
     return 0;
 }

@@ -288,6 +288,29 @@ class DLXM():
         sols = dlx.all_solutions(verbose)
         return [set(sol) for sol in sols]
 
+    def get_solution(self) -> Set[int]:
+        primary_items: List[Tuple[ConcItem, int, int]] = []
+        secondary_items: List[ConcItem] = []
+
+        x: DLXMVariable
+        for x in self.variables:
+            if x.secondary:
+                for k in x:
+                    secondary_items.append(x[k])
+            else:
+                for k in x:
+                    primary_items.append((x[k], x.lower_bound, x.upper_bound))
+
+        primary = _P(primary_items)
+        secondary = _S(secondary_items)
+        rows = _R([])
+
+        dlx = _DLX(primary, secondary, rows)
+        for p, s in self.rows_cpp:
+            dlx.add_row(p, s)
+        sol = dlx.get_solution()
+        return set(sol)
+
 
 if __name__ == "__main__":
     print("hello, world !")
