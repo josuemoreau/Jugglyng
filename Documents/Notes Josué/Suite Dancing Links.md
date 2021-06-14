@@ -161,6 +161,65 @@ On introduit :
   P_{b, t} : (m, i) \Rightarrow B_{b, t}
   $$
 
+  $$
+  P_{b, t} : (m, i) \Rightarrow P_{t + 1, b} : (m', i) \text{ pour } m' \neq m \text{ et pour toute position } i
+  $$
+
+  
+
+Idée pour la suite : introduire une variable secondaire qui compte le nombre de balles dans une main (pas possible ! parce que dans le cas d'un lancer multiplex on ne pourrait pas deviner qu'il faut la diminuer de plus de 1).
+
+### Quatrième version
+
+- Variables primaires :
+
+  - $B_{b, t} \in \{1\}$ : la balle $b$ est quelque part au temps $t$.
+  - $N_{t, m, i} \in \{1\}$ : la variable $S_{t, m, i}$ doit être initialisée.
+  - $C_{t, m} \in \{1\}$ : configuration de la main $m$ obligatoire au temps $t$.
+
+- Variables secondaires :
+
+  - $P_{t, m, i}$ : on lui affecte une couleur $b$ (pour toute balle $b$).
+  - $F_{t, b}$ : on lui affecte une couleur $0$ ou $1$ : la balle $b$ est en vol au temps $t$.
+  - $S_{t, m, i}$ : on lui affecte une couleur $0$ ou $1$ : l'emplacement $(m, i)$ est utilisé ou non au temps $t$.
+  - $E$ : on lui affecte une couleur $0$ ou $1$ : schéma interdit activé si $F : 1$.
+
+- Couleurs :
+
+  - $0$ et $1$ : Faux ou Vrai.
+  - $b$ pour toute balle $b$.
+
+- Règles :
+  $$
+  x_{T(t, b, \hmax)}^{m, h} \Rightarrow 
+  \left\{\begin{array}{l}
+  	P_{t + \hmax - h, m, i} : b\\
+  	S_{t, m, i} : 1\\
+  	N_{t, m, i}\\
+  	B_{b, t}\\
+  	E : 0
+  \end{array}\right.
+  $$
+
+  $$
+  P_{t, m, i} : b \Rightarrow
+  \left\{\begin{array}{l}
+  (P_{t + 1, m', i'} : b \text{ et } F_{t + 1, b} : 0) \text{ ou (pas sur la même ligne) } F_{t + 1, b} : 1\\
+  S_{t, m, i} : 1\\
+  N_{t, m, i}\\
+  \end{array}\right.
+  $$
+
+- Schémas autorisés (pour chaque temps $t$ et chaque main $m$, l'un de ces schémas doit être choisi) :
+  $$
+  \begin{array}{c}
+  C_{t, m} \;\wedge\; S_{t, m, 0} : 1 \;\wedge\; S_{t, m, 1} : 1 \;\wedge\; S_{t, m, 2} : 1 \;\wedge\; E : 1\\
+  C_{t, m} \;\wedge\; S_{t, m, 0} : 1 \;\wedge\; S_{t, m, 1} : 1 \;\wedge\; S_{t, m, 2} : 0 \;\wedge\; E : 1\\
+  C_{t, m} \;\wedge\; S_{t, m, 0} : 1 \;\wedge\; S_{t, m, 1} : 0 \;\wedge\; S_{t, m, 2} : 0 \;\wedge\; E : 1\\
+  C_{t, m} \;\wedge\; S_{t, m, 0} : 0 \;\wedge\; S_{t, m, 1} : 0 \;\wedge\; S_{t, m, 2} : 0 \;\wedge\; E : 1\\
+  \end{array}
+  $$
+
 
 
 ## Modifications sur l'algorithme M

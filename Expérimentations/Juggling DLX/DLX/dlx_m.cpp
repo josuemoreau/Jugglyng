@@ -160,11 +160,13 @@ void DLX::unhide(INT p) {
 }
 
 void DLX::commit(INT p, INT j) {
+    cout << "commit secondary column " << j << " from node " << p << endl;
     if (CLR(p) == EMPTY_COLOR) this->cover(j);
     else if (CLR(p) != IGNORE_COLOR) this->purify(p);
 }
 
 void DLX::purify(INT p) {
+    cout << "purify line of node " << p << endl;
     COLOR c = CLR(p);
     INT i = TOP(p);
     CLR(i) = c;
@@ -193,7 +195,7 @@ void DLX::unpurify(INT p) {
 }
 
 void DLX::tweak(INT x, INT p) {
-    // cout << "tweak " << x << " for item " << p << endl;
+    cout << "tweak " << x << " for item " << p << endl;
     this->hide(x);
     INT d = DLINK(x);
     DLINK(p) = d;
@@ -202,7 +204,7 @@ void DLX::tweak(INT x, INT p) {
 }
 
 void DLX::tweak_special(INT x, INT p) {
-    // cout << "tweak " << x << " for item " << p << endl;
+    cout << "tweak " << x << " for item " << p << endl;
     INT d = DLINK(x);
     DLINK(p) = d;
     ULINK(d) = p;
@@ -353,8 +355,8 @@ vector<vector<INT>> DLX::all_solutions(bool verbose) {
         cout << endl;
     };
 
-    M2: // cout << "M2" << endl;
-        // ppx(x, l);
+    M2: cout << "M2" << endl;
+        ppx(x, l);
         if (RLINK(0) == 0) {
             // cout << "====================================================" << endl;
             // cout << "Found solution :" << endl;
@@ -366,22 +368,22 @@ vector<vector<INT>> DLX::all_solutions(bool verbose) {
             // cout << "====================================================" << endl;
             goto M9;
         }
-    M3: // cout << "M3" << endl;
-        // ppx(x, l);
+    M3: cout << "M3" << endl;
+        ppx(x, l);
         i = this->choose();
-        // cout << "Choose " << i << endl;
-        // cout << "Branch degree " << branch_degree(i) << endl;
-        // cout << "BOUND(i) " << BOUND(i) << endl;
+        cout << "Choose " << i << endl;
+        cout << "Branch degree " << branch_degree(i) << endl;
+        cout << "BOUND(i) " << BOUND(i) << endl;
         if (branch_degree(i) == 0) goto M9;
-    M4: // cout << "M4" << endl;
-        // ppx(x, l);
+    M4: cout << "M4" << endl;
+        ppx(x, l);
         x[l] = DLINK(i);
         BOUND(i)--;
         if (BOUND(i) == 0) this->cover(i);
         if (BOUND(i) != 0 || SLACK(i) != 0)
             ft[l] = x[l];
-    M5: // cout << "M5" << endl;
-        // ppx(x, l);
+    M5: cout << "M5" << endl;
+        ppx(x, l);
         if (BOUND(i) == 0 && SLACK(i) == 0) {
             if (x[l] != i) goto M6;
             else goto M8;
@@ -396,8 +398,8 @@ vector<vector<INT>> DLX::all_solutions(bool verbose) {
             RLINK(p) = q;
             LLINK(q) = p;
         }
-    M6: // cout << "M6" << endl;
-        // ppx(x, l);
+    M6: cout << "M6" << endl;
+        ppx(x, l);
         if (x[l] != i) {
             p = x[l] + 1;
             while (p != x[l]) {
@@ -413,10 +415,11 @@ vector<vector<INT>> DLX::all_solutions(bool verbose) {
                 }
             }
         }
+        print_table();
         l++;
         goto M2;
-    M7: // cout << "M7" << endl;
-        // ppx(x, l);
+    M7: cout << "M7" << endl;
+        ppx(x, l);
         // if (x[l] != i) {
         p = x[l] - 1;
         while (p != x[l]) {
@@ -435,8 +438,8 @@ vector<vector<INT>> DLX::all_solutions(bool verbose) {
         x[l] = DLINK(x[l]);
         // cout << "x_l " << x[l] << endl;
         goto M5;
-    M8: // cout << "M8" << endl;
-        // ppx(x, l);
+    M8: cout << "M8" << endl;
+        ppx(x, l);
         // cout << "BOUND(i) " << BOUND(i) << endl;
         // cout << "SLACK(i) " << SLACK(i) << endl;
         if (BOUND(i) == 0 && SLACK(i) == 0)
@@ -445,9 +448,9 @@ vector<vector<INT>> DLX::all_solutions(bool verbose) {
         else this->untweak(ft, l);
         BOUND(i)++;
         // cout << "BOUND(i) " << BOUND(i) << endl;
-    M9: // cout << "M9" << endl;
+    M9: cout << "M9" << endl;
         // cout << "M9 - l=" << l << endl;
-        // ppx(x, l);
+        ppx(x, l);
         if (l == 0) {
             if (verbose) {
                 cout << "---------------------------------" << endl;
