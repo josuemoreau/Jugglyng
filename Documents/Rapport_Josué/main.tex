@@ -57,16 +57,50 @@ nombreux éléments concrets concernant la pratique de la jonglerie.
 La jonglerie non musicale est un domaine qui a déjà été étudié à plusieurs
 reprises, notamment par Claude Shannon~\cite{shannon}, ainsi que par Burkard
 Polster~\cite{polster}. Notre modélisation de la jonglerie s'appuiera
-majoritairement sur celle présente dans le livre de Burkard
-Polster~\cite{polster}.
+principalement sur celle présente dans le livre de Burkard
+Polster~\cite{polster}. Nous modifierons cette modélisation afin de correspondre
+à la jonglerie musicale. À notre connaissance, il n'existe aucun article ou
+ouvrage traitant de ce sujet.
 
 \section{Formalisation mathématique de la jonglerie}
+\subsection{Jonglerie à une main}
+Dans un premier temps, on s'intéresse à la jonglerie à une main. Formellement,
+une figure de jonglerie à une main est définie par une séquence de lancers. Un
+lancer est paramétré par deux choses : l'instant auquel il est effectué et la
+durée de vol de la balle lancée. Il est possible de ne pas spécifier le temps
+auquel la balle est lancée si on considère que le premier lancer de la séquence
+est effectué au temps $0$ et que par la suite chaque élément de la séquence est
+effectué au temps suivant le lancer de son élément précédent. On peut voir sur
+la figure~\ref{fig1} la séquence de jonglerie $3, 3, 3, 3, ...$. Lorsqu'il y a
+un $0$ dans la séquence de jonglerie, on considère qu'il n'y a aucun lancer,
+ainsi la séquence $4, 2, 0, 4, 2, 0, ...$ est représentée dans la figure 2.
+
+\begin{figure}[!h]
+  \centering
+  \includegraphics{figure-0}
+
+  \caption{Séquence de jonglerie 3, 3, 3, 3, ...}
+  \label{fig1}
+\end{figure}
+
+\begin{figure}[!h]
+  \centering
+  \includegraphics{figure-1}
+
+  \caption{Séquence de jonglerie 4, 2, 0, 4, 2, 0, ...}
+  \label{fig2}
+\end{figure}
+
+
+% présenter le "hand swap"
 
 \section{Automates et jonglerie musicale}
 
-\section{Le problème Exact Cover}
-
 \section{L'algorithme de composition}
+\subsection{Pré-traitement}
+\subsection{Le problème Exact Cover}
+\subsection{Résolution avec MILP}
+\subsection{Résolution avec Dancing Links}
 
 \section{Perspectives et travaux futurs}
 

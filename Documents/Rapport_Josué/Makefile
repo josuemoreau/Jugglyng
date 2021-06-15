@@ -1,7 +1,8 @@
 
 all: main.pdf
 
-main.pdf: main.tex biblio.bib
+main.pdf: main.tex biblio.bib figures.ml
+	mlpost figures.ml
 	rubber -d main.tex
 
 clean:
