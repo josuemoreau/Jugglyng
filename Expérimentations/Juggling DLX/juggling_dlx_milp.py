@@ -263,6 +263,23 @@ class XItem(Item):
         }, ["throw"], ["flying_time"], low=0, high=1)
 
 
+class MItem(Item):
+    def __init__(self, time, hand, multiplex):
+        super().__init__("m", {
+            "time": time,
+            "hand": hand,
+            "multiplex": multiplex
+        }, ["time", "hand", "multiplex"], low=0, high=len(multiplex) - 1)
+
+
+class DItem(Item):
+    def __init__(self, time, hand):
+        super().__init__("d", {
+            "time": time,
+            "hand": hand
+        }, ["time", "hand"], low=0, high=1)
+
+
 class UItem(Item):
     def __init__(self, time, ball, hand):
         super().__init__("u", {
@@ -323,35 +340,13 @@ class CItem(Item):
         }, ["time", "hand"])
 
 
-class EItem(Item):
-    def __init__(self):
-        super().__init__("e", {})
-
-
 class ExactCoverInstance(StructClass):
     max_time: int = 0
     nb_hands: int = 1
     balls: Set[str] = set()
 
-    x_items: List[Item] = []
-    l_items: List[Item] = []
-    w_items: List[Item] = []
-    i_items: List[Item] = []
-    m_items: List[Item] = []
-    d_items: List[Item] = []
-    u_items: List[Item] = []
-
-    b_items: List[Item] = []
-    p_items: List[Item] = []
-
-    x_items_bounds: Tuple[int, int] = (0, 1)
-    l_items_bounds: Tuple[int, int] = (1, 1)
-    w_items_bounds: Tuple[int, int] = (0, 1)
-    i_items_bounds: Tuple[int, int] = (0, 1)
-    m_items_bounds: Dict[Tuple[int, ], Tuple[int, int]] = {}
-    d_items_bounds: Tuple[int, int] = (0, 1)
-    u_items_bounds: Tuple[int, int] = (0, 1)
-    b_items_bounds: Tuple[int, int] = (1, 1)
+    prim_items: List[Item] = []
+    sec_items: List[Item] = []
 
     colors: List[Tuple[int, int]] = []
 
@@ -426,16 +421,16 @@ def throws_to_extended_exact_cover(balls: Set[str], throws: List[List[Throw]],
             # w = WItem(time=t, hand=hand)
             # w_items[(t, hand)] = w
 
-            # d = DItem(time=t, hand=hand)
-            # d_items[(t, hand)] = d
+            d = DItem(time=t, hand=hand)
+            d_items[(t, hand)] = d
 
-            # for f in forbidden_multiplex:
-            #     if len(f) == 1:
-            #         fflying_time.append(f[0])
-            #     else:
-            #         m = MItem(time=t, hand=hand, multiplex=f)
-            #         m_items[(t, hand, f)] = m
-            #         m_items_bounds[f] = (0, len(f) - 1)
+            for f in forbidden_multiplex:
+                if len(f) == 1:
+                    fflying_time.append(f[0])
+                else:
+                    m = MItem(time=t, hand=hand, multiplex=f)
+                    m_items[(t, hand, f)] = m
+                    m_items_bounds[f] = (0, len(f) - 1)
 
             for ball in balls:
                 u = UItem(ball=ball, time=t, hand=hand)
@@ -464,8 +459,6 @@ def throws_to_extended_exact_cover(balls: Set[str], throws: List[List[Throw]],
                 n = NItem(time=t, hand=hand, pos=i)
                 n_items[(t, hand, i)] = n
     print(max_time)
-    # Génération de l'item d'erreur
-    error = EItem()
     # Génération des couleurs
     colors["false"] = 1
     colors["true"] = 2
@@ -482,13 +475,13 @@ def throws_to_extended_exact_cover(balls: Set[str], throws: List[List[Throw]],
                         continue
                     row: List[Union[Item, Tuple[Item, int]]] = \
                         [x_items[(throw, hand, flying_time)], l_items[throw]]
-                    # if not multiple_throws:
-                    #     row.append(d_items[(t + throw.max_height - flying_time, hand)])
+                    if not multiple_throws:
+                        row.append(d_items[(t + throw.max_height - flying_time, hand)])
                     # if flying_time == throw.max_height:
                     #     row.append(i_items[(t, hand, flying_time)])
-                    # for fmulti in fmultiplex[flying_time]:
-                    #     row.append(m_items[(t + throw.max_height - flying_time,
-                    #                hand, fmulti)])
+                    for fmulti in fmultiplex[flying_time]:
+                        row.append(m_items[(t + throw.max_height - flying_time,
+                                   hand, fmulti)])
                     # for fnext in f2seqs[flying_time]:
                     #     row.append(i_items[(t + 1, hand, fnext)])
                     # for t1 in range(t, t + throw.max_height - flying_time + 1):
@@ -513,7 +506,7 @@ def throws_to_extended_exact_cover(balls: Set[str], throws: List[List[Throw]],
                         row.append((f_items[(t1, throw.ball)], colors["true"]))
                     # row.append((error, colors["false"]))
                     rows.append(row)
-    for t in range(max_time):
+    for t in range(max_time + 1):
         for hand in range(nb_hands):
             # Génération des lignes des configurations autorisées
             for lim in range(0, K + 1):
@@ -548,17 +541,17 @@ def throws_to_extended_exact_cover(balls: Set[str], throws: List[List[Throw]],
     for clr, i in colors.items():
         colors_list[i] = clr
 
-    return ExactCoverInstance(x_items=list(x_items.values()),
-                              l_items=list(l_items.values()),
-                              w_items=list(w_items.values()),
-                              i_items=list(i_items.values()),
-                              m_items=list(m_items.values()),
-                              d_items=list(d_items.values()),
-                              u_items=list(u_items.values()),
-                              b_items=list(b_items.values()),
-                              p_items=list(p_items.values()),
-                              w_items_bounds=(0, K),
-                              m_items_bounds=m_items_bounds,
+    return ExactCoverInstance(prim_items=list(x_items.values())
+                              + list(l_items.values())
+                              + list(m_items.values())
+                              + list(d_items.values())
+                              + list(u_items.values())
+                              + list(b_items.values())
+                              + list(c_items.values())
+                              + list(n_items.values()),
+                              sec_items=list(p_items.values())
+                              + list(s_items.values())
+                              + list(f_items.values()),
                               colors=colors_list,
                               rows=rows,
                               max_time=max_time,
@@ -675,101 +668,31 @@ def solve_exact_cover_with_milp(ec_instance: ExactCoverInstance,
 
 def dlx_solver_instance(ec_instance: ExactCoverInstance) -> DLXM:
     dlx = DLXM()
-    x = dlx.new_variable(ec_instance.x_items_bounds[0], ec_instance.x_items_bounds[1])
-    l = dlx.new_variable(ec_instance.l_items_bounds[0], ec_instance.l_items_bounds[1])
-    w = dlx.new_variable(ec_instance.w_items_bounds[0], ec_instance.w_items_bounds[1])
-    i = dlx.new_variable(ec_instance.i_items_bounds[0], ec_instance.i_items_bounds[1])
-    d = dlx.new_variable(ec_instance.d_items_bounds[0], ec_instance.d_items_bounds[1])
-    u = dlx.new_variable(ec_instance.u_items_bounds[0], ec_instance.u_items_bounds[1])
-    b = dlx.new_variable(ec_instance.b_items_bounds[0], ec_instance.b_items_bounds[1])
-    c = dlx.new_variable(1, 1)
-    n = dlx.new_variable(1, 1)
-    sec = dlx.new_variable(secondary=True)
 
-    m = {}
-    m_vars = {}
-    for mit in ec_instance.m_items:
-        bounds = ec_instance.m_items_bounds[mit.multiplex]
-        if bounds not in m_vars:
-            m_vars[bounds] = dlx.new_variable(bounds[0], bounds[1])
-        m[mit] = m_vars[bounds][mit]
+    primary = {}
+    secondary = dlx.new_variable(secondary=True)
+    vars = {}
+    for item in ec_instance.prim_items:
+        if item.bounds not in vars:
+            vars[item.bounds] = dlx.new_variable(item.bounds[0], item.bounds[1])
+        primary[item] = vars[item.bounds][item]
 
     for row in ec_instance.rows:
         row_primary = []
         row_secondary = []
         for item in row:
-            if isinstance(item, XItem):
-                row_primary.append(x[item])
-            elif isinstance(item, LItem):
-                row_primary.append(l[item])
-            # elif isinstance(item, WItem):
-            #     row_primary.append(w[item])
-            # elif isinstance(item, IItem):
-            #     row_primary.append(i[item])
-            # elif isinstance(item, MItem):
-            #     row_primary.append(m[item])
-            # elif isinstance(item, DItem):
-            #     row_primary.append(d[item])
-            elif isinstance(item, UItem):
-                row_primary.append(u[item])
-            elif isinstance(item, BItem):
-                row_primary.append(b[item])
-            elif isinstance(item, CItem):
-                row_primary.append(c[item])
-            elif isinstance(item, NItem):
-                row_primary.append(n[item])
+            if isinstance(item, Item):
+                row_primary.append(primary[item])
             else:
                 it, clr = item
-                row_secondary.append((sec[it], clr))
+                row_secondary.append((secondary[it], clr))
         dlx.add_row(row_primary, row_secondary)
 
     return dlx
 
 
-def solve_with_dlx(ec_instance: ExactCoverInstance) -> List[ExactCoverSolution]:
-    dlx = DLXM()
-    x = dlx.new_variable(ec_instance.x_items_bounds[0], ec_instance.x_items_bounds[1])
-    l = dlx.new_variable(ec_instance.l_items_bounds[0], ec_instance.l_items_bounds[1])
-    w = dlx.new_variable(ec_instance.w_items_bounds[0], ec_instance.w_items_bounds[1])
-    i = dlx.new_variable(ec_instance.i_items_bounds[0], ec_instance.i_items_bounds[1])
-    d = dlx.new_variable(ec_instance.d_items_bounds[0], ec_instance.d_items_bounds[1])
-    u = dlx.new_variable(ec_instance.u_items_bounds[0], ec_instance.u_items_bounds[1])
-    b = dlx.new_variable(ec_instance.b_items_bounds[0], ec_instance.b_items_bounds[1])
-    p = dlx.new_variable(secondary=True)
-
-    m = {}
-    m_vars = {}
-    for mit in ec_instance.m_items:
-        bounds = ec_instance.m_items_bounds[mit.multiplex]
-        if bounds not in m_vars:
-            m_vars[bounds] = dlx.new_variable(bounds[0], bounds[1])
-        m[mit] = m_vars[bounds][mit]
-
-    for row in ec_instance.rows:
-        row_primary = []
-        row_secondary = []
-        for item in row:
-            if isinstance(item, XItem):
-                row_primary.append(x[item])
-            elif isinstance(item, LItem):
-                row_primary.append(l[item])
-            elif isinstance(item, WItem):
-                row_primary.append(w[item])
-            elif isinstance(item, IItem):
-                row_primary.append(i[item])
-            elif isinstance(item, MItem):
-                row_primary.append(m[item])
-            elif isinstance(item, DItem):
-                row_primary.append(d[item])
-            elif isinstance(item, UItem):
-                row_primary.append(u[item])
-            elif isinstance(item, BItem):
-                row_primary.append(b[item])
-            else:
-                it, clr = item
-                if isinstance(it, PItem):
-                    row_secondary.append((p[it], clr))
-        dlx.add_row(row_primary, row_secondary)
+def all_solutions_with_dlx(ec_instance: ExactCoverInstance) -> List[ExactCoverSolution]:
+    dlx = dlx_solver_instance()
 
     sols_selected_rows = dlx.all_solutions()
     sols = []
@@ -782,6 +705,19 @@ def solve_with_dlx(ec_instance: ExactCoverInstance) -> List[ExactCoverSolution]:
                                        balls=ec_instance.balls,
                                        rows=rows))
     return sols
+
+
+def get_solution_with_dlx(ec_instance: ExactCoverInstance) -> List[ExactCoverSolution]:
+    dlx = dlx_solver_instance(ec_instance)
+
+    sol = dlx.get_solution()
+    rows = []
+    for i in sol:
+        rows.append(dlx.row_obj(i))
+    return ExactCoverSolution(max_time=ec_instance.max_time,
+                              nb_hands=ec_instance.nb_hands,
+                              balls=ec_instance.balls,
+                              rows=rows)
 
 
 def juggling_sol_to_simulator(sol):
