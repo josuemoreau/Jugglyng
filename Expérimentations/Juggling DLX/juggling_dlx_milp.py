@@ -207,13 +207,17 @@ class Item(object):
     _print_order_up: List[str]
     _dict: Dict[str, Any]
 
+    bounds: Tuple[int, int]
+
     def __init__(self, name: str, params: Dict[str, Any],
                  print_order_down: List[str] = [],
-                 print_order_up: List[str] = []):
+                 print_order_up: List[str] = [],
+                 low: int = 1, high: int = 1):
         self._name = name
         self._dict = params
         self._print_order_down = print_order_down
         self._print_order_up = print_order_up
+        self.bounds = (low, high)
 
     def __getitem__(self, k):
         return self._dict[k]
@@ -256,7 +260,7 @@ class XItem(Item):
             "throw": throw,
             "hand": hand,
             "flying_time": flying_time
-        }, ["throw"], ["flying_time"])
+        }, ["throw"], ["flying_time"], low=0, high=1)
 
 
 class UItem(Item):
@@ -265,7 +269,7 @@ class UItem(Item):
             "time": time,
             "ball": ball,
             "hand": hand
-        }, ["time", "ball", "hand"])
+        }, ["time", "ball", "hand"], low=0, high=1)
 
 
 class BItem(Item):
@@ -294,12 +298,29 @@ class SItem(Item):
         }, ["time", "hand"])
 
 
+class NItem(Item):
+    def __init__(self, time, hand, pos):
+        super().__init__("n", {
+            "time": time,
+            "hand": hand,
+            "pos": pos
+        }, ["time", "hand"])
+
+
 class FItem(Item):
     def __init__(self, time, ball):
         super().__init__("f", {
             "time": time,
             "ball": ball
         }, ["time", "ball"])
+
+
+class CItem(Item):
+    def __init__(self, time, hand):
+        super().__init__("c", {
+            "time": time,
+            "hand": hand
+        }, ["time", "hand"])
 
 
 class EItem(Item):
@@ -360,10 +381,14 @@ def throws_to_extended_exact_cover(balls: Set[str], throws: List[List[Throw]],
     m_items_bounds = {}
     d_items = {}
     u_items = {}
+    # Variables liées aux contraintes sur les mains
     b_items = {}
     p_items = {}
     s_items = {}
     f_items = {}
+    n_items = {}
+    c_items = {}
+
     colors = {}
     fmultiplex: Dict[int, List[Tuple[int, ]]] = {i: [] for i in range(1, H + 1)}
     fflying_time = []
@@ -421,7 +446,7 @@ def throws_to_extended_exact_cover(balls: Set[str], throws: List[List[Throw]],
     #         for flying_time in range(1, H + 1):
     #             i = IItem(time=t, hand=hand, flying_time=flying_time)
     #             i_items[(t, hand, flying_time)] = i
-    # Génération des items B et C
+    # Génération des items B, F, C, P, S, N
     for t in range(max_time + 1):
         for ball in balls:
             b = BItem(time=t, ball=ball)
@@ -429,11 +454,15 @@ def throws_to_extended_exact_cover(balls: Set[str], throws: List[List[Throw]],
             f = FItem(time=t, ball=ball)
             f_items[(t, ball)] = f
         for hand in range(nb_hands):
+            c = CItem(time=t, hand=hand)
+            c_items[(t, hand)] = c
             for i in range(K):
                 p = PItem(time=t, hand=hand, pos=i)
                 p_items[(t, hand, i)] = p
                 s = SItem(time=t, hand=hand, pos=i)
                 s_items[(t, hand, i)] = s
+                n = NItem(time=t, hand=hand, pos=i)
+                n_items[(t, hand, i)] = n
     print(max_time)
     # Génération de l'item d'erreur
     error = EItem()
@@ -466,56 +495,54 @@ def throws_to_extended_exact_cover(balls: Set[str], throws: List[List[Throw]],
                     #     row.append(w_items[(t1, hand)])
 
                     # On garde ça pour l'instant ...
-                    # row.append(u_items[(throw.ball, throw.time, hand)])
-                    # if flying_time == 1:
-                    #     row.append(u_items[(throw.ball,
-                    #                         throw.time + throw.max_height,
-                    #                         hand)])
-                    # row.append((p_items[(t + throw.max_height - flying_time,
-                    #                      hand, 0)],
-                    #             colors[ball]))
-                    # row.append((s_items[(t + throw.max_height - flying_time,
-                    #                      hand, 0)],
-                    #             colors["true"]))
-                    # for t1 in range(t + throw.max_height - flying_time + 1, t + throw.max_height):
-                    #     row.append(b_items[(t1, throw.ball)])
-                    #     row.append(f_items[(t1, throw.ball)])
-                    row.append((error, colors["false"]))
+                    row.append(u_items[(throw.ball, throw.time, hand)])
+                    if flying_time == 1:
+                        row.append(u_items[(throw.ball,
+                                            throw.time + throw.max_height,
+                                            hand)])
+                    row.append((p_items[(t + throw.max_height - flying_time,
+                                         hand, 0)],
+                                colors[ball]))
+                    row.append((s_items[(t + throw.max_height - flying_time,
+                                         hand, 0)],
+                                colors["true"]))
+                    row.append(n_items[(t + throw.max_height - flying_time,
+                                        hand, 0)])
+                    for t1 in range(t + throw.max_height - flying_time + 1, t + throw.max_height):
+                        row.append(b_items[(t1, throw.ball)])
+                        row.append((f_items[(t1, throw.ball)], colors["true"]))
+                    # row.append((error, colors["false"]))
                     rows.append(row)
-    # for t in range(max_time):
-    #     for hand in range(nb_hands):
-    #         for i in range(0, K):
-    #             for ball in balls:
-    #                 rows.append([
-    #                     b_items[(t, ball)],
-    #                     (p_items[(t, hand, i)], colors[ball]),
-    #                     (s_items[(t, hand, i)], colors["true"]),
-    #                     (f_items[(t, ball)], colors["false"])
-    #                 ])
-    #                 rows.append([
-    #                     b_items[(t, ball)],
-    #                     (f_items[(t, ball)], colors["true"])
-    #                 ])
-                    # if t == max_time:
-                    #     rows.append([
-                    #         (p_items[(t, hand, i)], colors[ball]),
-                    #         b_items[(t, ball)]
-                    #     ])
-                    # else:
-                    #     for hand_dst in range(nb_hands):
-                    #         for pos_dst in range(nb_hands):
-
-                    #     rows.append([
-                    #         (p_items[(t, hand, i)], colors[ball]),
-                    #         (s_items[(t, hand, i)], colors["true"]),
-                    #         (p_items[(t + 1, hand, i)], colors[]),
-                    #         b_items[(ball, t)]
-                    #     ])
-                    #     rows.append([
-                    #         (p_items[(ball, t)], colors[(hand, i)]),
-                    #         (p_items[(ball, t + 1)], colors[(hand, i)]),
-                    #         b_items[(ball, t)]
-                    #     ])
+    for t in range(max_time):
+        for hand in range(nb_hands):
+            # Génération des lignes des configurations autorisées
+            for lim in range(0, K + 1):
+                row = [c_items[(t, hand)]]
+                for i in range(0, K):
+                    if i < lim:
+                        row.append((s_items[(t, hand, i)], colors["true"]))
+                    else:
+                        row.append((s_items[(t, hand, i)], colors["false"]))
+                # row.append((error, colors["true"]))
+                rows.append(row)
+            # Génération des lignes de choix des configurations
+            for i in range(0, K):
+                for ball in balls:
+                    rows.append([
+                        b_items[(t, ball)],
+                        n_items[(t, hand, i)],
+                        (p_items[(t, hand, i)], colors[ball]),
+                        (s_items[(t, hand, i)], colors["true"]),
+                        (f_items[(t, ball)], colors["false"])
+                    ])
+                    rows.append([
+                        b_items[(t, ball)],
+                        (f_items[(t, ball)], colors["true"])
+                    ])
+                    rows.append([
+                        n_items[(t, hand, i)],
+                        (s_items[(t, hand, i)], colors["false"])
+                    ])
 
     colors_list: List[str] = ["" for i in range(k)]
     for clr, i in colors.items():
@@ -655,6 +682,8 @@ def dlx_solver_instance(ec_instance: ExactCoverInstance) -> DLXM:
     d = dlx.new_variable(ec_instance.d_items_bounds[0], ec_instance.d_items_bounds[1])
     u = dlx.new_variable(ec_instance.u_items_bounds[0], ec_instance.u_items_bounds[1])
     b = dlx.new_variable(ec_instance.b_items_bounds[0], ec_instance.b_items_bounds[1])
+    c = dlx.new_variable(1, 1)
+    n = dlx.new_variable(1, 1)
     sec = dlx.new_variable(secondary=True)
 
     m = {}
@@ -685,6 +714,10 @@ def dlx_solver_instance(ec_instance: ExactCoverInstance) -> DLXM:
                 row_primary.append(u[item])
             elif isinstance(item, BItem):
                 row_primary.append(b[item])
+            elif isinstance(item, CItem):
+                row_primary.append(c[item])
+            elif isinstance(item, NItem):
+                row_primary.append(n[item])
             else:
                 it, clr = item
                 row_secondary.append((sec[it], clr))
