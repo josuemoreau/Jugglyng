@@ -24,16 +24,16 @@
 
 \section{Introduction}
 % contexte
-La jonglerie a pour principe consiste à effectuer de manière continue des
-lancers et rattrapés de balles dans les airs. Dans sa forme artistique, le
-jongleur s'intéresse aux figures qu'il jongle afin de rendre sa performance la
-plus esthétique possible. La jonglerie musicale, quant-à-elle s'intéresse aux
-musiques qu'il est possible de jongler avec des balles qui jouent des sons lors
-de certaines actions. Dans ce stage et dans la suite de ce rapport, nous nous
-intéresserons uniquement aux balles qui jouent une note de musique lorsqu'elle
-est rattrapée. Le jongleur souhaitant jouer une musique particulière lorsqu'il
+Jongler avec des consiste à effectuer de manière continue des lancers et
+rattrapés d'objets dans les airs. Dans sa forme artistique, le jongleur
+s'intéresse aux figures qu'il jongle afin de rendre sa performance la plus
+esthétique possible. La jonglerie musicale, quant-à-elle s'intéresse aux
+musiques qu'il est possible de créer avec des balles qui jouent des sons lors de
+certaines actions. Dans ce stage et dans la suite de ce rapport, nous nous
+intéresserons aux balles qui jouent une note de musique lorsqu'elle est
+rattrapée. Le jongleur souhaitant jouer une musique particulière lorsqu'il
 jongle avec de telles balles doit donc les lancer de manière à ce qu'elles
-retombent dans le bon ordre pour restituer la musique. Cet exercice est
+retombent dans le bon ordre pour restituer la musique voulue. Cet exercice est
 difficile car l'ordre de lancer des balles associées aux notes n'est pas
 nécessairement celui de la musique. De plus, la séquence de lancers à effectuer
 pour jouer une musique donnée n'est généralement pas unique et n'existe pas
@@ -48,19 +48,20 @@ séquence de lancers jouable qui restitue cette musique ?
 Ce stage a été effectué en binôme, avec Léo Kulinski, également étudiant au M1
 MPRI, et sous la direction de Florent Hivert et Nicolas Thiéry. Il s'est déroulé
 au Laboratoire Interdisciplinaire des Sciences du Numérique et majoritairement
-en distanciel. Durant ce stage, nous avons pu collaborer avec un jongleur
-professionnel, Vincent de Lavenère, qui s'intéresse depuis de nombreuses années
-à l'élaboration de spectacles de jonglerie musicale et qui a pu nous fournir de
-nombreux éléments concrets concernant la pratique de la jonglerie.
+en distanciel. Durant ce stage, nous avons pu rencontrer et travailler avec un
+jongleur professionnel, Vincent de Lavenère, qui s'intéresse depuis de
+nombreuses années à l'élaboration de spectacles de jonglerie musicale, et qui a
+pu nous fournir de nombreux éléments concrets concernant la pratique de la
+jonglerie.
 
 % état de l'art
-La jonglerie non musicale est un domaine qui a déjà été étudié à plusieurs
-reprises, notamment par Claude Shannon~\cite{shannon}, ainsi que par Burkard
-Polster~\cite{polster}. Notre modélisation de la jonglerie s'appuiera
-principalement sur celle présente dans le livre de Burkard
-Polster~\cite{polster}. Nous modifierons cette modélisation afin de correspondre
-à la jonglerie musicale. À notre connaissance, il n'existe aucun article ou
-ouvrage traitant de ce sujet.
+La jonglerie non musicale est un domaine qui a déjà été étudié à de nombreuses
+reprises, notamment par Claude Shannon~\cite{shannon} (et j'arrive pas à savoir
+qui a inventé le siteswap). De tous ces travaux a émergé une notation qui sert à
+décrire des motifs de jonglerie : le siteswap. Notre modélisation s'appuiera sur
+celle du siteswap, décrite dans le livre de Burkard Polster~\cite{polster}. Nous
+adapterons cette modélisation afin de correspondre à la jonglerie musicale. À
+notre connaissance, il n'existe aucun article ou ouvrage traitant de ce sujet.
 
 \section{Formalisation mathématique de la jonglerie}
 \subsection{Jonglerie à une main}
@@ -73,7 +74,8 @@ est effectué au temps $0$ et que par la suite chaque élément de la séquence 
 effectué au temps suivant le lancer de son élément précédent. On peut voir sur
 la figure~\ref{fig1} la séquence de jonglerie $3, 3, 3, 3, ...$. Lorsqu'il y a
 un $0$ dans la séquence de jonglerie, on considère qu'il n'y a aucun lancer,
-ainsi la séquence $4, 2, 0, 4, 2, 0, ...$ est représentée dans la figure 2.
+ainsi la séquence $4, 2, 0, 4, 2, 0, ...$ est représentée dans la
+figure~\ref{fig2}.
 
 \begin{figure}[!h]
   \centering
@@ -91,8 +93,11 @@ ainsi la séquence $4, 2, 0, 4, 2, 0, ...$ est représentée dans la figure 2.
   \label{fig2}
 \end{figure}
 
+% présenter le multiplex
 
-% présenter le "hand swap"
+% présenter le "hand swap" i.e. l'équivalence de possibilités entre tout jouer
+% avec une unique main et jouer la même séquence avec plusieurs mains dans le
+% cas du multiplex
 
 \section{Automates et jonglerie musicale}
 

@@ -24,9 +24,11 @@ let vd x = vec (dir x)
 
 let emp_head_kind = Arrow.add_line Arrow.empty
 
-let rec simple_juggling_seq dots max_time hpadding l =
+let rec simple_juggling_seq_arcs dots max_time hpadding l =
   let t = ref (-1) in
-  List.fold_left (fun acc h ->
+  let diff = xpart (Box.ctr (Box.get "bdot_1" dots)) /. (cm 1.) -.
+             xpart (Box.ctr (Box.get "bdot_0" dots)) /. (cm 1.) in
+  let command_list = List.fold_left (fun acc h ->
       incr t;
       if !t < max_time then
         Arrow.point_to_point
@@ -42,36 +44,43 @@ let rec simple_juggling_seq dots max_time hpadding l =
            else
              (Point.shift
                 (Box.ctr (Box.get ("bdot_" ^ (string_of_int (max_time - 1))) dots))
-                (cmp (2. *. hpadding *. float_of_int (!t + h - max_time + 1), 0.0)))
+                (cmp (diff *. float_of_int (!t + h - max_time + 1), 0.0)))
           ) :: acc
       else acc
-    ) [] l
+    ) [] l in
+  let pic = seq command_list in
+  let height = ypart (Picture.north pic) /. (cm 1.) in
+  let width =
+    xpart
+      (Box.ctr (Box.get ("bdot_" ^ (string_of_int (max_time - 1))) dots))
+    /. (cm 1.) +. hpadding
+  in
+  Picture.clip
+    pic
+    (Path.path
+       ~style:jLine
+       ~cycle:jLine
+       ~scale:cm
+       [(0., 0.); (width, 0.);
+        (width, height); (0., height)])
+
+let simple_juggling_seq max_time hpadding l =
+  let dots = Box.tabularl ~hpadding:(cm hpadding) [
+      foldi_asc (fun l i ->
+          bdot ("bdot_" ^ string_of_int (i - 1)) :: l) [] max_time;
+      foldi_asc (fun l i ->
+          Box.tex (string_of_int (i - 1)) :: l) [] max_time
+    ] in
+  seq ([
+      Box.draw dots;
+      simple_juggling_seq_arcs dots max_time hpadding l
+    ])
 
 let fig1 =
-  let max_time = 10 in
-  let hpadding = 0.5 in
-  let dots = Box.tabularl ~hpadding:(cm hpadding) [
-      foldi_asc (fun l i ->
-          bdot ("bdot_" ^ string_of_int (i - 1)) :: l) [] max_time;
-      foldi_asc (fun l i ->
-          Box.tex (string_of_int (i - 1)) :: l) [] max_time
-    ] in
-  seq ([
-      Box.draw dots;
-    ] @ simple_juggling_seq dots 10 hpadding [3; 3; 3; 3; 3; 3; 3])
+  simple_juggling_seq 10 0.7 [3; 3; 3; 3; 3; 3; 3; 3; 3; 3]
 
 let fig2 =
-  let max_time = 10 in
-  let hpadding = 0.5 in
-  let dots = Box.tabularl ~hpadding:(cm hpadding) [
-      foldi_asc (fun l i ->
-          bdot ("bdot_" ^ string_of_int (i - 1)) :: l) [] max_time;
-      foldi_asc (fun l i ->
-          Box.tex (string_of_int (i - 1)) :: l) [] max_time
-    ] in
-  seq ([
-      Box.draw dots;
-    ] @ simple_juggling_seq dots 10 hpadding [4; 2; 0; 4; 2; 0; 4; 2; 0; 4])
+  simple_juggling_seq 10 0.7 [4; 2; 0; 4; 2; 0; 4; 2; 0; 4]
 
 let () =
   let figs = [fig1; fig2] in
