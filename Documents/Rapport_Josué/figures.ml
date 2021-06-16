@@ -64,24 +64,30 @@ let rec simple_juggling_seq_arcs dots max_time hpadding l =
        [(0., 0.); (width, 0.);
         (width, height); (0., height)])
 
-let simple_juggling_seq max_time hpadding l =
-  let dots = Box.tabularl ~hpadding:(cm hpadding) [
+let simple_juggling_seq max_time hpadding l under_l =
+  let dots = Box.tabularl ~hpadding:(cm hpadding) ([
       foldi_asc (fun l i ->
           bdot ("bdot_" ^ string_of_int (i - 1)) :: l) [] max_time;
       foldi_asc (fun l i ->
           Box.tex (string_of_int (i - 1)) :: l) [] max_time
-    ] in
+    ] @ if under_l <> [] then [List.map (fun s -> Box.tex s) under_l] else []) in
   seq ([
       Box.draw dots;
       simple_juggling_seq_arcs dots max_time hpadding l
     ])
 
+let fig0 =
+  simple_juggling_seq 10 0.7 [3; 3; 3; 3; 3; 3; 3; 3; 3; 3] []
+
 let fig1 =
-  simple_juggling_seq 10 0.7 [3; 3; 3; 3; 3; 3; 3; 3; 3; 3]
+  simple_juggling_seq 10 0.7 [4; 2; 0; 4; 2; 0; 4; 2; 0; 4] []
 
 let fig2 =
-  simple_juggling_seq 10 0.7 [4; 2; 0; 4; 2; 0; 4; 2; 0; 4]
+  simple_juggling_seq 4 0.5 [3; 1; 0; 0] ["do"; "ré"; "do"; "ré"]
+
+let fig3 =
+  simple_juggling_seq 4 0.5 [2; 2; 0; 0] ["ré"; "do"; "do"; "ré"]
 
 let () =
-  let figs = [fig1; fig2] in
+  let figs = [fig0; fig1; fig2; fig3] in
   List.iteri (fun i x -> Metapost.emit ("figure-" ^ string_of_int i) x) figs
