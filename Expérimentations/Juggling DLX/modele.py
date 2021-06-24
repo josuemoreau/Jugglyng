@@ -13,7 +13,6 @@ information and managing sound.
 
 import copy
 import collections
-from pygame import mixer
 from audio import Audio
 from recordclass import RecordClass
 from pythreejs import Mesh, SphereBufferGeometry, SphereGeometry, OrbitControls, MeshLambertMaterial, MeshStandardMaterial, PerspectiveCamera, Scene, Renderer, AmbientLight
@@ -81,7 +80,7 @@ class Model:
 
         for number, ball_prop in enumerate(ball_properties):
             if "tone" in ball_prop:
-                tone = "../../sounds2/{}.wav".format(ball_prop["tone"])
+                tone = "../../sounds/{}.wav".format(ball_prop["tone"])
             else:
                 tone = None
             if "color" in ball_prop:
