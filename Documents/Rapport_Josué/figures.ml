@@ -98,7 +98,7 @@ let simple_juggling_seq max_time hpadding l
       simple_juggling_seq_arcs dots max_time hpadding l ~juggle_forever
     ])
 
-let rec multiplex_juggling_seq_arcs dots max_time hpadding ?(juggle_forever=false) l =
+let rec multiplex_juggling_seq_arcs dots max_time hpadding ?(juggle_forever=false) l special_seq =
   let t = ref (-1) in
   let diff = xpart (Box.ctr (Box.get "bdot_1" dots)) /. (cm 1.) -.
              xpart (Box.ctr (Box.get "bdot_0" dots)) /. (cm 1.) in
@@ -143,7 +143,7 @@ let rec multiplex_juggling_seq_arcs dots max_time hpadding ?(juggle_forever=fals
           :: acc
         ) acc hlist
     ) [] (List.rev l) in
-  let pic = seq (command_list @ if juggle_forever then before else []) in
+  let pic = seq (command_list @ (if juggle_forever then before else []) @ special_seq) in
   let height = ypart (Picture.north pic) /. (cm 1.) in
   let width =
     xpart
@@ -165,7 +165,72 @@ let multiplex_juggling_seq max_time hpadding ?(juggle_forever=false) l =
           bdot ("bdot_" ^ string_of_int (i - 1)) :: l) [] max_time]) in
   seq ([
       Box.draw dots;
-      multiplex_juggling_seq_arcs dots max_time hpadding l ~juggle_forever
+      multiplex_juggling_seq_arcs dots max_time hpadding l [] ~juggle_forever;
+    ])
+
+let multiplex_juggling_seq1 max_time hpadding ?(juggle_forever=false) l =
+  let dots = Box.tabularl ~vpadding:(cm 0.10) ~hpadding:(cm hpadding) ([
+      foldi_asc (fun l i ->
+          bdot ("bdot_" ^ string_of_int (i - 1)) :: l) [] max_time]) in
+  let diff = xpart (Box.ctr (Box.get "bdot_1" dots)) /. (cm 1.) -.
+             xpart (Box.ctr (Box.get "bdot_0" dots)) /. (cm 1.) in
+  let special_seq = [
+    Arrow.point_to_point
+      ~ind:(vd (-60.0))
+      ~outd:(vd 60.0)
+      ~sep:0.0
+      ~style:jCurve
+      ~kind:emp_head_kind
+      (Box.ctr (Box.get "bdot_0" dots))
+      (Box.ctr (Box.get "bdot_1" dots));
+    Arrow.point_to_point
+      ~ind:(vd (-60.0))
+      ~outd:(vd 60.0)
+      ~sep:0.0
+      ~style:jCurve
+      ~kind:emp_head_kind
+      (Box.ctr (Box.get "bdot_2" dots))
+      (Box.ctr (Box.get "bdot_3" dots));
+    Arrow.point_to_point
+      ~ind:(vd (-60.0))
+      ~outd:(vd 60.0)
+      ~sep:0.0
+      ~style:jCurve
+      ~kind:emp_head_kind
+      (Box.ctr (Box.get "bdot_3" dots))
+      (Box.ctr (Box.get "bdot_4" dots));
+    Arrow.point_to_point
+      ~ind:(vd (-60.0))
+      ~outd:(vd 60.0)
+      ~sep:0.0
+      ~style:jCurve
+      ~kind:emp_head_kind
+      (Box.ctr (Box.get "bdot_5" dots))
+      (Box.ctr (Box.get "bdot_6" dots));
+    Arrow.point_to_point
+      ~ind:(vd (-60.0))
+      ~outd:(vd 60.0)
+      ~sep:0.0
+      ~style:jCurve
+      ~kind:emp_head_kind
+      (Point.shift
+         (Box.ctr (Box.get "bdot_0" dots))
+         (cmp (diff *. -1.0, 0.0)))
+      (Box.ctr (Box.get "bdot_0" dots));
+    Arrow.point_to_point
+      ~ind:(vd (-60.0))
+      ~outd:(vd 60.0)
+      ~sep:0.0
+      ~style:jCurve
+      ~kind:emp_head_kind
+      (Box.ctr (Box.get "bdot_6" dots))
+      (Point.shift
+         (Box.ctr (Box.get "bdot_6" dots))
+         (cmp (diff, 0.0)))
+  ] in
+  seq ([
+      Box.draw dots;
+      multiplex_juggling_seq_arcs dots max_time hpadding l special_seq ~juggle_forever
     ])
 
 let rec multihand_juggling_seq_arcs dots max_time hpadding ?(juggle_forever=false) l =
@@ -359,7 +424,7 @@ let fig_multihand =
      ] ~juggle_forever:true)
 
 let fig_aplatissement =
-  ("aplatissement", multiplex_juggling_seq 7 0.7
+  ("aplatissement", multiplex_juggling_seq1 7 0.7
      [[2; 1; 2; 1; 3; 3]; [2; 2]; [1; 1]; [2; 1; 2; 1; 3; 3]; [2; 2]; [1; 1];
       [2; 1; 2; 1; 3; 3]; [2; 2]; [1; 1]]
      ~juggle_forever:true)
@@ -372,7 +437,7 @@ let draw_bdot p =
 
 module StringMap = Map.Make(String)
 
-let pre_traitement_fig hpadding vpadding ?(show_decomp=true) musique =
+let pre_traitement_fig hpadding vpadding ?(show_decomp=true) ?(throws=false) musique =
   let map = List.fold_right (fun (t, n) acc ->
       try
         StringMap.add n (t :: StringMap.find n acc) acc
@@ -430,7 +495,6 @@ let pre_traitement_fig hpadding vpadding ?(show_decomp=true) musique =
   let last_dot_x = xpart
       (Box.ctr
          (Box.get (string_of_int max_time) dots)) /. (cm 1.) in
-  Printf.printf "%f %f\n" first_dot_x last_dot_x;
   let lines = if not show_decomp then [] else foldi_asc (fun acc n ->
       let y = ypart (Box.ctr (Box.get (string_of_int n) dots)) /. (cm 1.) in
       let last_t, last_n = Hashtbl.find lines_htbl n in
@@ -457,6 +521,100 @@ let fig_pre_traitement =
      (9, "mi"); (10, "ré"); (11, "ré"); (12, "do")
    ])
 
+let state = Box.tex ~dx:(bp 4.)
+
+let final = Box.box ~style:Circle
+
+let transition states tex anchor ?outd ?ind x_name y_name =
+  let x = Box.get x_name states and y = Box.get y_name states in
+  let outd = match outd with None -> None | Some a -> Some (vec (dir a)) in
+  let ind = match ind with None -> None | Some a -> Some (vec (dir a)) in
+  Arrow.draw ~tex ~anchor (cpath ?outd ?ind x y)
+
+let loop states tex name =
+  let box = Box.get name states in
+  let a = Point.shift (Box.south box) (Point.pt (cm 0., cm (-0.4))) in
+  let c = Box.ctr box in
+  let p = Path.pathk [
+      knotp ~r: (vec (dir 225.)) c;
+      knotp a;
+      knotp ~l: (vec (dir 135.)) c;
+    ] in
+  let bp = Box.bpath box in
+  Arrow.draw ~tex ~anchor:`Bot (cut_after bp (cut_before bp p))
+
+let initial states name =
+  let b = Box.get name states in
+  let p = Box.west b in
+  Arrow.draw (Path.pathp [ Point.shift p (Point.pt (cm (-0.3), zero)); p ])
+
+let fig_automate =
+  let emp = Box.tex "" in
+  let s n = state ~name:n n in
+  let states = Box.tabularl ~hpadding:(cm 1.0) ~vpadding:(cm 1.0) [
+      [s "10101"; emp; s "01110"; emp; s "00111"];
+      [emp; s "01011"; emp; emp; emp];
+      [emp; emp; s "10110"; emp; s "10011"];
+      [emp; s "01101"; emp; emp; emp];
+      [s "11010"; emp; s "11100"; emp; s "11001"]
+    ] in
+  ("automate",
+   seq [
+     Box.draw states;
+     transition states "1" `East "10101" "11010" ~ind:(-110.0) ~outd:(-70.0);
+     transition states "3" `North "10101" "01110";
+     transition states "5" `Northeast "10101" "01011";
+     transition states "0" `East "01110" "11100" ~ind:147.0 ~outd:33.0;
+     transition states "0" `South "00111" "01110";
+     transition states "0" `Northeast "01011" "10110";
+     transition states "1" `East "10110" "11100";
+     transition states "4" `East "10110" "01110";
+     transition states "5" `Northwest "10110" "01101";
+     transition states "1" `North "10011" "10110";
+     transition states "2" `Northeast "10011" "01110";
+     transition states "5" `East "10011" "00111";
+     transition states "0" `Northwest "01101" "11010";
+     transition states "2" `North "11010" "11100";
+     transition states "4" `Northwest "11010" "10110" ~ind:00.0;
+     transition states "5" `West "11010" "10101" ~ind:70.0 ~outd:110.0;
+     loop states "3" "11100";
+     transition states "4" `South "11100" "11010" ~ind:160.0;
+     transition states "5" `North "11100" "11001";
+     transition states "2" `South "11001" "11010" ~ind:140.0;
+     transition states "3" `Northeast "11001" "10110";
+     transition states "5" `East "11001" "10011"
+   ])
+
+let fig_automate_musical =
+  let emp = Box.tex "" in
+  let s n = state ~name:n n in
+  let states = Box.tabularl ~hpadding:(cm 2.0) ~vpadding:(cm 1.0) [
+      [s "0 ré 0 do"; emp; emp];
+      [s "do 0 ré 0"; s "0 ré do 0"; emp];
+      [s "ré do 0 0"; s "do 0 0 ré"; s "0 0 ré do"];
+      [s "do ré 0 0"; s "ré 0 0 do"; s "0 0 do ré"];
+      [s "ré 0 do 0"; s "0 do ré 0"; emp];
+      [s "0 do 0 ré"; emp; emp]
+    ] in
+  ("automate_musical",
+   seq [
+     Box.draw states;
+     transition states "0" `West "0 ré 0 do" "ré 0 do 0" ~ind:0.0;
+     transition states "1" `West "do 0 ré 0" "do ré 0 0" ~ind:(-10.0);
+     transition states "3" `North "do 0 ré 0" "0 ré do 0";
+     transition states "4" `West "do 0 ré 0" "0 ré 0 do";
+     transition states "2" `West "ré do 0 0" "do ré 0 0" ~ind:(-50.0);
+     transition states "3" `West "ré do 0 0" "do 0 ré 0";
+     transition states "4" `North "ré do 0 0" "do 0 0 ré";
+     transition states "2" `East "do ré 0 0" "ré do 0 0" ~ind:130.0;
+     transition states "3" `West "do ré 0 0" "ré 0 do 0";
+     transition states "4" `North "do ré 0 0" "ré 0 0 do";
+     transition states "1" `West "ré 0 do 0" "ré do 0 0" ~ind:10.0;
+     transition states "3" `North "ré 0 do 0" "0 do ré 0";
+     transition states "4" `West "ré 0 do 0" "0 do 0 ré";
+     transition states "0" `West "0 do 0 ré" "do 0 ré 0" ~ind:0.0;
+   ])
+
 let () =
   let figs : Mlpost.Command.t list = [fig0; fig1; fig2; fig3; fig4; fig5; fig6] in
   List.iteri (fun i x -> Metapost.emit ("figure-" ^ string_of_int i) x) figs;
@@ -464,6 +622,7 @@ let () =
   let figs = [
     fig_do_re_mi; fig_re_do_mi; fig_3_1_2; fig_2_3_2; fig_3_0_3_0;
     fig_13_2_0; fig_aplatissement; fig_multihand;
-    fig_pre_traitement; fig_pre_traitement_timeline
+    fig_pre_traitement; fig_pre_traitement_timeline;
+    fig_automate; fig_automate_musical
   ] in
   List.iteri (fun i (name, x) -> Metapost.emit ("figure-" ^ name) x) figs
