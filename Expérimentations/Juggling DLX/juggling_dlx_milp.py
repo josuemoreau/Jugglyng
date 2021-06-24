@@ -191,6 +191,14 @@ class CItem(Item):
         }, ["time", "hand"])
 
 
+class HItem(Item):
+    def __init__(self, time, ball):
+        super().__init__("h", {
+            "time": time,
+            "hand": ball
+        }, ["time", "ball"])
+
+
 class ExactCoverInstance(StructClass):
     max_time: int = 0
     nb_hands: int = 1
@@ -244,6 +252,7 @@ def throws_to_extended_exact_cover(balls: Set[str], throws: List[List[Throw]],
     n_items = {}
     c_items = {}
     v_items = {}
+    h_items = {}
 
     colors = {}
     fmultiplex: Dict[int, List[Tuple[int, ]]] = {i: [] for i in range(1, H + 1)}
@@ -289,14 +298,16 @@ def throws_to_extended_exact_cover(balls: Set[str], throws: List[List[Throw]],
                     m_items[(t, hand, f)] = m
                     m_items_bounds[f] = (0, len(f) - 1)
 
-            # for ball in balls:
-            #     u = UItem(ball=ball, time=t, hand=hand)
-            #     u_items[(ball, t, hand)] = u
+            for ball in balls:
+                u = UItem(ball=ball, time=t, hand=hand)
+                u_items[(ball, t, hand)] = u
     # Génération des items B, F, C, P, S, N
     for t in range(max_time + 1):
         for ball in balls:
             b = BItem(time=t, ball=ball)
             b_items[(t, ball)] = b
+            h_it = HItem(time=t, ball=ball)
+            h_items[(t, ball)] = h_it
             f = FItem(time=t, ball=ball)
             f_items[(t, ball)] = f
             v = VItem(time=t, ball=ball)
@@ -323,6 +334,9 @@ def throws_to_extended_exact_cover(balls: Set[str], throws: List[List[Throw]],
         for pos in range(hand_capacity):
             colors[(hand, pos)] = k
             k += 1
+    for hand in range(nb_hands):
+        colors[hand] = k
+        k += 1
     # Génération des lignes
     for t in range(len(throws)):
         for throw in throws[t]:
@@ -341,11 +355,11 @@ def throws_to_extended_exact_cover(balls: Set[str], throws: List[List[Throw]],
                                    hand, fmulti)])
 
                     # On garde ça pour l'instant ...
-                    # row.append(u_items[(throw.ball, throw.time, hand)])
-                    # if flying_time == 2:
-                    #     row.append(u_items[(throw.ball,
-                    #                         throw.time + throw.max_height,
-                    #                         hand)])
+                    row.append(u_items[(throw.ball, throw.time, hand)])
+                    if flying_time == 2:
+                        row.append(u_items[(throw.ball,
+                                            throw.time + throw.max_height,
+                                            hand)])
                     row.append((p_items[(release_time, hand, 0)], colors[throw.ball]))
                     row.append((s_items[(release_time, hand, 0)], colors["true"]))
                     row.append(n_items[(release_time, hand, 0)])
@@ -354,36 +368,40 @@ def throws_to_extended_exact_cover(balls: Set[str], throws: List[List[Throw]],
                     row.append((f_items[(release_time, throw.ball)], colors["false"]))
                     # la balle ne vol pas pendant le temps en main (donc aucun lancers silencieux)
                     for t1 in range(t, release_time):
+                        row.append((h_items[(t1, throw.ball)], colors[hand]))
                         row.append((f_items[(t1, throw.ball)], colors["false"]))
                     # la balle ne vol pas au moment où elle est rattrapée
-                    # row.append((f_items[(t + throw.max_height, throw.ball)], colors["false"]))
+                    row.append((f_items[(t + throw.max_height, throw.ball)], colors["false"]))
                     # la balle vol entre le lancer et la récupération
                     for t1 in range(release_time + 1, t + throw.max_height):
                         row.append(b_items[(t1, throw.ball)])
                         row.append((f_items[(t1, throw.ball)], colors["true"]))
-                    # row.append((error, colors["false"]))
                     for hand_dest in range(nb_hands):
-                        for lim in range(hand_capacity):
-                            row1 = row.copy()
-                            for i in range(lim):
+                        if flying_time > 2 or hand != hand_dest:
+                            for lim in range(hand_capacity):
+                                row1 = row.copy()
+                                row1.append((h_items[(t + throw.max_height,
+                                                      throw.ball)],
+                                            colors[hand_dest]))
+                                for i in range(lim):
+                                    row1.append((s_items[(t + throw.max_height,
+                                                          hand_dest,
+                                                          i)],
+                                                colors["true"]))
                                 row1.append((s_items[(t + throw.max_height,
                                                       hand_dest,
-                                                      i)],
-                                             colors["true"]))
-                            row1.append((s_items[(t + throw.max_height,
-                                                  hand_dest,
-                                                  lim)],
-                                         colors["true"]))
-                            row1.append((p_items[(t + throw.max_height,
-                                                  hand_dest,
-                                                  lim)],
-                                         colors[throw.ball]))
-                            for i in range(lim + 1, hand_capacity):
-                                row1.append((s_items[(t + throw.max_height,
+                                                      lim)],
+                                            colors["true"]))
+                                row1.append((p_items[(t + throw.max_height,
                                                       hand_dest,
-                                                      i)],
-                                             colors["false"]))
-                            rows.append(row1)
+                                                      lim)],
+                                            colors[throw.ball]))
+                                for i in range(lim + 1, hand_capacity):
+                                    row1.append((s_items[(t + throw.max_height,
+                                                          hand_dest,
+                                                          i)],
+                                                colors["false"]))
+                                rows.append(row1)
                     # rows.append(row)
     for t in range(max_time + 1):
         for hand in range(nb_hands):
@@ -395,28 +413,96 @@ def throws_to_extended_exact_cover(balls: Set[str], throws: List[List[Throw]],
                         row.append((s_items[(t, hand, i)], colors["true"]))
                     else:
                         row.append((s_items[(t, hand, i)], colors["false"]))
-                if t + 2 <= max_time and lim == 1:
+                if t + 1 <= max_time and lim == 1:
                     for ball in balls:
+                        rowb = row.copy()
+                        # configuration initiale
+                        rowb.append((f_items[(t, ball)], colors["false"]))
+                        rowb.append((p_items[(t, hand, 0)], colors[ball]))
+                        rowb.append((v_items[(t, ball)], colors[(hand, 0)]))
                         # aucun lancer
-                        row0 = row.copy()
+                        row0 = rowb.copy()
                         row0.append((f_items[(t + 1, ball)], colors["false"]))
                         row0.append((p_items[(t + 1, hand, 0)], colors[ball]))
                         row0.append((v_items[(t + 1, ball)], colors[(hand, 0)]))
-                        row0.append((f_items[(t + 2, ball)], colors["false"]))
-                        row0.append((p_items[(t + 2, hand, 0)], colors[ball]))
-                        row0.append((v_items[(t + 2, ball)], colors[(hand, 0)]))
-                        # lancer de hauteur 1
-                        row1 = row.copy()
+                        if t % 2 == 0 and t + 2 <= max_time:
+                            row0.append((f_items[(t + 2, ball)], colors["false"]))
+                            row0.append((p_items[(t + 2, hand, 0)], colors[ball]))
+                            row0.append((v_items[(t + 2, ball)], colors[(hand, 0)]))
+                        # lancer de la balle
+                        row1 = rowb.copy()
                         row1.append((f_items[(t + 1, ball)], colors["true"]))
-                        row1.append((f_items[(t + 2, ball)], colors["false"]))
+                        # if t % 2 == 0 and t + 2 <= max_time:
+                        #     row1.append((f_items[(t + 2, ball)], colors["false"]))
                         # lancer de hauteur >= 2
-                        row2 = row.copy()
-                        row2.append((f_items[(t + 1, ball)], colors["true"]))
-                        row2.append((f_items[(t + 2, ball)], colors["true"]))
+                        # row2 = row.copy()
+                        # row2.append((f_items[(t + 1, ball)], colors["true"]))
+                        # if t % 2 == 0 and t + 2 <= max_time:
+                        #     row2.append((f_items[(t + 2, ball)], colors["true"]))
                         # ajout des lignes
                         rows.append(row0)
                         rows.append(row1)
-                        rows.append(row2)
+                        # rows.append(row2)
+                elif t + 1 <= max_time and lim == 2:
+                    for b1 in balls:
+                        for b2 in balls:
+                            rowb = row.copy()
+                            # configuration initiale
+                            rowb.append((f_items[(t, b1)], colors["false"]))
+                            rowb.append((p_items[(t, hand, 0)], colors[b1]))
+                            rowb.append((v_items[(t, b1)], colors[(hand, 0)]))
+                            rowb.append((f_items[(t, b2)], colors["false"]))
+                            rowb.append((p_items[(t, hand, 1)], colors[b2]))
+                            rowb.append((v_items[(t, b2)], colors[(hand, 1)]))
+                            # aucun lancer
+                            row0 = rowb.copy()
+                            row0.append((f_items[(t + 1, b1)], colors["false"]))
+                            row0.append((p_items[(t + 1, hand, 0)], colors[b1]))
+                            row0.append((v_items[(t + 1, b1)], colors[(hand, 0)]))
+                            row0.append((f_items[(t + 1, b2)], colors["false"]))
+                            row0.append((p_items[(t + 1, hand, 1)], colors[b2]))
+                            row0.append((v_items[(t + 1, b2)], colors[(hand, 1)]))
+                            if t % 2 == 0 and t + 2 <= max_time:
+                                row0.append((f_items[(t + 2, b1)], colors["false"]))
+                                row0.append((p_items[(t + 2, hand, 0)], colors[b1]))
+                                row0.append((v_items[(t + 2, b1)], colors[(hand, 0)]))
+                                row0.append((f_items[(t + 2, b2)], colors["false"]))
+                                row0.append((p_items[(t + 2, hand, 1)], colors[b2]))
+                                row0.append((v_items[(t + 2, b2)], colors[(hand, 1)]))
+                            # échange des balles
+                            row1 = rowb.copy()
+                            row1.append((f_items[(t + 1, b1)], colors["false"]))
+                            row1.append((p_items[(t + 1, hand, 0)], colors[b1]))
+                            row1.append((v_items[(t + 1, b1)], colors[(hand, 0)]))
+                            row1.append((f_items[(t + 1, b2)], colors["false"]))
+                            row1.append((p_items[(t + 1, hand, 1)], colors[b2]))
+                            row1.append((v_items[(t + 1, b2)], colors[(hand, 1)]))
+                            if t % 2 == 0 and t + 2 <= max_time:
+                                row1.append((f_items[(t + 2, b2)], colors["false"]))
+                                row1.append((p_items[(t + 2, hand, 0)], colors[b2]))
+                                row1.append((v_items[(t + 2, b2)], colors[(hand, 0)]))
+                                row1.append((f_items[(t + 2, b1)], colors["false"]))
+                                row1.append((p_items[(t + 2, hand, 1)], colors[b1]))
+                                row1.append((v_items[(t + 2, b1)], colors[(hand, 1)]))
+                            # lancer de la balle en position 0
+                            row2 = rowb.copy()
+                            row2.append((f_items[(t + 1, b1)], colors["true"]))
+                            row2.append((f_items[(t + 1, b2)], colors["false"]))
+                            row2.append((p_items[(t + 1, hand, 0)], colors[b2]))
+                            row2.append((v_items[(t + 1, b2)], colors[(hand, 0)]))
+                            if t % 2 == 0 and t + 2 <= max_time:
+                                row2.append((f_items[(t + 2, b2)], colors["false"]))
+                                row2.append((p_items[(t + 2, hand, 0)], colors[b2]))
+                                row2.append((v_items[(t + 2, b2)], colors[(hand, 0)]))
+                            # lancer des deux balles
+                            row3 = rowb.copy()
+                            row3.append((f_items[(t + 1, b1)], colors["true"]))
+                            row3.append((f_items[(t + 1, b2)], colors["true"]))
+                            # ajout des lignes
+                            rows.append(row0)
+                            rows.append(row1)
+                            rows.append(row2)
+                            rows.append(row3)
                 else:
                     rows.append(row)
             # Génération des lignes de choix des configurations
@@ -425,6 +511,7 @@ def throws_to_extended_exact_cover(balls: Set[str], throws: List[List[Throw]],
                     rows.append([
                         b_items[(t, ball)],
                         n_items[(t, hand, i)],
+                        (h_items[(t, ball)], colors[hand]),
                         (p_items[(t, hand, i)], colors[ball]),
                         (s_items[(t, hand, i)], colors["true"]),
                         (f_items[(t, ball)], colors["false"])
