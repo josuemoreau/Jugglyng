@@ -222,6 +222,30 @@ Idée pour la suite : introduire une variable secondaire qui compte le nombre de
 
 
 
+
+
+
+
+
+$$
+C_{t, m} \wedge S_{t, m, 0} : 0 \wedge S_{t, m, 1} : 0 \wedge S_{t, m, 2} : 0\\
+C_{t, m} \wedge S_{t, m, 0} : 1 \wedge S_{t, m, 1} : 0 \wedge S_{t, m, 2} : 0 \wedge P_{t, m, 0} : b \wedge P_{t + 1, m, 0} : b\\
+C_{t, m} \wedge S_{t, m, 0} : 1 \wedge S_{t, m, 1} : 0 \wedge S_{t, m, 2} : 0 \wedge P_{t, m, 0} : b \wedge P_{t + 1, m', 0} : b \wedge \\
+
+C_{t, m} \wedge 
+
+C_{t, m} \wedge S_{t, m, 0} : 1 \wedge S_{t, m, 1} : 1 \wedge S_{t, m, 2} : 0 \wedge P_{t, m, 0} : b_1 \wedge P_{t, m, 1} : b_2 \wedge P_{t + 1, m, 0} : b_2 \wedge P_{t + 1, m, 1} : b_1 \wedge S_{t + 1, m, 0} : 1 \wedge S_{t + 1, m, 1} : 1\\
+
+C_{t, m} \wedge S_{t, m, 0} : 1 \wedge S_{t, m, 1} : 1 \wedge S_{t, m, 2} : 0 \wedge P_{t, m, 0} : b_1 \wedge P_{t, m, 1} : b_2 \wedge P_{t + 1, m, 0} : b_2 \wedge P_{t + 1, m, 1} : b_1 \wedge S_{t + 1, m, 0} : 1 \wedge S_{t + 1, m, 1} : 1\\
+
+C_{t, m} \wedge S_{t, m, 0} : 1 \wedge S_{t, m, 1} : 1 \wedge S_{t, m, 2} : 0 \wedge P_{t, m, 0} : b_1 \wedge P_{t, m, 1} : b_2 \wedge P_{t + 1, m, 0} : b_2 \wedge P_{t + 1, m, 1} : b_1 \wedge S_{t + 1, m, 0} : 1 \wedge S_{t + 1, m, 1} : 1\\
+$$
+
+
+
+
+
+
 ## Modifications sur l'algorithme M
 
 Supposons $f$ une fonction de score d'une solution partielle. $f$ est telle que si $x'$ est la solution $x$ avec un choix supplémentaire à la fin, $0 \leq f(x') - f(x) \leq \frac{1}{n}$. On veut modifier l'algorithme M afin qu'il corresponde au schéma suivant :
