@@ -87,119 +87,6 @@ def music_to_throws(music: List[Tuple[int, str]]) \
         flying_note_time[n] = 0
     return notes, throws
 
-"""
-class XItem(StructClass):
-    throw: Throw
-    hand: int
-    flying_time: int
-
-    def __hash__(self):
-        return hash(str(self))
-
-    def latex(self):
-        return r"x_{}^{}".format("{" + str(self.throw) + "}",
-                                 "{" + str(self.hand) + ", "
-                                 + str(self.flying_time) + "}")
-
-
-class LItem(StructClass):
-    throw: Throw
-
-    def __hash__(self):
-        return hash(str(self))
-
-    def latex(self):
-        return r"l_{}".format("{" + str(self.throw) + "}")
-
-
-class WItem(StructClass):
-    time: int
-    hand: int
-
-    def __hash__(self):
-        return hash(str(self))
-
-    def latex(self):
-        return r"w_{}".format("{" + str(self.time) + ", "
-                              + str(self.hand) + "}")
-
-
-class IItem(StructClass):
-    time: int
-    hand: int
-    flying_time: int
-
-    def __hash__(self):
-        return hash(str(self))
-
-    def latex(self):
-        return r"i_{}".format("{" + str(self.time) + ", "
-                              + str(self.hand) + ", "
-                              + str(self.flying_time) + "}")
-
-
-class MItem(StructClass):
-    time: int
-    hand: int
-    multiplex: Tuple[int, ]
-
-    def __hash__(self):
-        return hash(str(self))
-
-    def latex(self):
-        return r"m_{}".format("{" + str(self.time) + ", "
-                              + str(self.hand) + ", "
-                              + str(self.multiplex) + "}")
-
-
-class DItem(StructClass):
-    time: int
-    hand: int
-
-    def __hash__(self):
-        return hash(str(self))
-
-    def latex(self):
-        return r"D_{}^{}".format("{" + str(self.time) + "}",
-                                 "{" + str(self.hand) + "}")
-
-
-class UItem(StructClass):
-    ball: str
-    time: int
-    hand: int
-
-    def __hash__(self):
-        return hash(str(self))
-
-    def latex(self):
-        return r"U_{}^{}".format("{" + self.ball + ", " + str(self.time) + "}",
-                                 "{" + str(self.hand) + "}")
-
-
-class BItem(StructClass):
-    ball: str
-    time: int
-
-    def __hash__(self):
-        return hash(str(self))
-
-    def latex(self):
-        return r"B_{}^{}".format("{" + self.ball + "}",
-                                 "{" + str(self.time) + "}")
-
-
-class PItem(StructClass):
-    ball: str
-    time: int
-
-    def __hash__(self):
-        return hash(str(self))
-
-    def latex(self):
-        return r"C_{}".format("{" + str(self.time) + "}")
-"""
-
 
 class Item(object):
     _name: str
@@ -263,6 +150,14 @@ class XItem(Item):
         }, ["throw"], ["flying_time"], low=0, high=1)
 
 
+class WItem(Item):
+    def __init__(self, max_weight, time, hand):
+        super().__init__("w", {
+            "time": time,
+            "hand": hand
+        }, ["time", "hand"], low=0, high=max_weight)
+
+
 class MItem(Item):
     def __init__(self, time, hand, multiplex):
         super().__init__("m", {
@@ -289,57 +184,6 @@ class UItem(Item):
         }, ["time", "ball", "hand"], low=0, high=1)
 
 
-class BItem(Item):
-    def __init__(self, time, ball):
-        super().__init__("b", {
-            "time": time,
-            "ball": ball
-        }, ["time", "ball"])
-
-
-class PItem(Item):
-    def __init__(self, time, hand, pos):
-        super().__init__("p", {
-            "time": time,
-            "hand": hand,
-            "pos": pos
-        }, ["time", "hand"])
-
-
-class SItem(Item):
-    def __init__(self, time, hand, pos):
-        super().__init__("s", {
-            "time": time,
-            "hand": hand,
-            "pos": pos
-        }, ["time", "hand"])
-
-
-class NItem(Item):
-    def __init__(self, time, hand, pos):
-        super().__init__("n", {
-            "time": time,
-            "hand": hand,
-            "pos": pos
-        }, ["time", "hand"])
-
-
-class FItem(Item):
-    def __init__(self, time, ball):
-        super().__init__("f", {
-            "time": time,
-            "ball": ball
-        }, ["time", "ball"])
-
-
-class CItem(Item):
-    def __init__(self, time, hand):
-        super().__init__("c", {
-            "time": time,
-            "hand": hand
-        }, ["time", "hand"])
-
-
 class ExactCoverInstance(StructClass):
     max_time: int = 0
     nb_hands: int = 1
@@ -362,7 +206,7 @@ class ExactCoverSolution(StructClass):
 
 
 def throws_to_extended_exact_cover(balls: Set[str], throws: List[List[Throw]],
-                                   nb_hands: int, H: int, K: int,
+                                   nb_hands: int, H: int, max_weight: int,
                                    forbidden_multiplex: List[Tuple[int, ]],
                                    forbidden_2sequences: List[Tuple[int, int]],
                                    multiple_throws: bool) \
@@ -371,18 +215,10 @@ def throws_to_extended_exact_cover(balls: Set[str], throws: List[List[Throw]],
     x_items = {}
     l_items = {}
     w_items = {}
-    i_items = {}
     m_items = {}
     m_items_bounds = {}
     d_items = {}
     u_items = {}
-    # Variables liées aux contraintes sur les mains
-    b_items = {}
-    p_items = {}
-    s_items = {}
-    f_items = {}
-    n_items = {}
-    c_items = {}
 
     colors = {}
     fmultiplex: Dict[int, List[Tuple[int, ]]] = {i: [] for i in range(1, H + 1)}
@@ -418,8 +254,8 @@ def throws_to_extended_exact_cover(balls: Set[str], throws: List[List[Throw]],
     # Génération des items w, M, D et U
     for t in range(max_time + 1):
         for hand in range(nb_hands):
-            # w = WItem(time=t, hand=hand)
-            # w_items[(t, hand)] = w
+            w = WItem(max_weight=max_weight, time=t, hand=hand)
+            w_items[(t, hand)] = w
 
             d = DItem(time=t, hand=hand)
             d_items[(t, hand)] = d
@@ -435,30 +271,6 @@ def throws_to_extended_exact_cover(balls: Set[str], throws: List[List[Throw]],
             for ball in balls:
                 u = UItem(ball=ball, time=t, hand=hand)
                 u_items[(ball, t, hand)] = u
-    # Génération des items I
-    # for t in range(max_time + 1):
-    #     for hand in range(nb_hands):
-    #         for flying_time in range(1, H + 1):
-    #             i = IItem(time=t, hand=hand, flying_time=flying_time)
-    #             i_items[(t, hand, flying_time)] = i
-    # Génération des items B, F, C, P, S, N
-    for t in range(max_time + 1):
-        for ball in balls:
-            b = BItem(time=t, ball=ball)
-            b_items[(t, ball)] = b
-            f = FItem(time=t, ball=ball)
-            f_items[(t, ball)] = f
-        for hand in range(nb_hands):
-            c = CItem(time=t, hand=hand)
-            c_items[(t, hand)] = c
-            for i in range(K):
-                p = PItem(time=t, hand=hand, pos=i)
-                p_items[(t, hand, i)] = p
-                s = SItem(time=t, hand=hand, pos=i)
-                s_items[(t, hand, i)] = s
-                n = NItem(time=t, hand=hand, pos=i)
-                n_items[(t, hand, i)] = n
-    print(max_time)
     # Génération des couleurs
     colors["false"] = 1
     colors["true"] = 2
@@ -477,15 +289,11 @@ def throws_to_extended_exact_cover(balls: Set[str], throws: List[List[Throw]],
                         [x_items[(throw, hand, flying_time)], l_items[throw]]
                     if not multiple_throws:
                         row.append(d_items[(t + throw.max_height - flying_time, hand)])
-                    # if flying_time == throw.max_height:
-                    #     row.append(i_items[(t, hand, flying_time)])
                     for fmulti in fmultiplex[flying_time]:
                         row.append(m_items[(t + throw.max_height - flying_time,
                                    hand, fmulti)])
-                    # for fnext in f2seqs[flying_time]:
-                    #     row.append(i_items[(t + 1, hand, fnext)])
-                    # for t1 in range(t, t + throw.max_height - flying_time + 1):
-                    #     row.append(w_items[(t1, hand)])
+                    for t1 in range(t, t + throw.max_height - flying_time + 1):
+                        row.append(w_items[(t1, hand)])
 
                     # On garde ça pour l'instant ...
                     row.append(u_items[(throw.ball, throw.time, hand)])
@@ -493,49 +301,7 @@ def throws_to_extended_exact_cover(balls: Set[str], throws: List[List[Throw]],
                         row.append(u_items[(throw.ball,
                                             throw.time + throw.max_height,
                                             hand)])
-                    row.append((p_items[(t + throw.max_height - flying_time,
-                                         hand, 0)],
-                                colors[ball]))
-                    row.append((s_items[(t + throw.max_height - flying_time,
-                                         hand, 0)],
-                                colors["true"]))
-                    row.append(n_items[(t + throw.max_height - flying_time,
-                                        hand, 0)])
-                    for t1 in range(t + throw.max_height - flying_time + 1, t + throw.max_height):
-                        row.append(b_items[(t1, throw.ball)])
-                        row.append((f_items[(t1, throw.ball)], colors["true"]))
-                    # row.append((error, colors["false"]))
                     rows.append(row)
-    for t in range(max_time + 1):
-        for hand in range(nb_hands):
-            # Génération des lignes des configurations autorisées
-            for lim in range(0, K + 1):
-                row = [c_items[(t, hand)]]
-                for i in range(0, K):
-                    if i < lim:
-                        row.append((s_items[(t, hand, i)], colors["true"]))
-                    else:
-                        row.append((s_items[(t, hand, i)], colors["false"]))
-                # row.append((error, colors["true"]))
-                rows.append(row)
-            # Génération des lignes de choix des configurations
-            for i in range(0, K):
-                for ball in balls:
-                    rows.append([
-                        b_items[(t, ball)],
-                        n_items[(t, hand, i)],
-                        (p_items[(t, hand, i)], colors[ball]),
-                        (s_items[(t, hand, i)], colors["true"]),
-                        (f_items[(t, ball)], colors["false"])
-                    ])
-                    rows.append([
-                        b_items[(t, ball)],
-                        (f_items[(t, ball)], colors["true"])
-                    ])
-                    rows.append([
-                        n_items[(t, hand, i)],
-                        (s_items[(t, hand, i)], colors["false"])
-                    ])
 
     colors_list: List[str] = ["" for i in range(k)]
     for clr, i in colors.items():
@@ -543,15 +309,11 @@ def throws_to_extended_exact_cover(balls: Set[str], throws: List[List[Throw]],
 
     return ExactCoverInstance(prim_items=list(x_items.values())
                               + list(l_items.values())
+                              + list(w_items.values())
                               + list(m_items.values())
                               + list(d_items.values())
-                              + list(u_items.values())
-                              + list(b_items.values())
-                              + list(c_items.values())
-                              + list(n_items.values()),
-                              sec_items=list(p_items.values())
-                              + list(s_items.values())
-                              + list(f_items.values()),
+                              + list(u_items.values()),
+                              sec_items=[],
                               colors=colors_list,
                               rows=rows,
                               max_time=max_time,
@@ -692,7 +454,7 @@ def dlx_solver_instance(ec_instance: ExactCoverInstance) -> DLXM:
 
 
 def all_solutions_with_dlx(ec_instance: ExactCoverInstance) -> List[ExactCoverSolution]:
-    dlx = dlx_solver_instance()
+    dlx = dlx_solver_instance(ec_instance)
 
     sols_selected_rows = dlx.all_solutions()
     sols = []
@@ -720,7 +482,7 @@ def get_solution_with_dlx(ec_instance: ExactCoverInstance) -> List[ExactCoverSol
                               rows=rows)
 
 
-def juggling_sol_to_simulator(sol):
+def juggling_sol_to_simulator(sol, colors):
     hand: List[Dict[str, int]] = [{} for t in range(sol.max_time + 1)]
     throws: List[List[List[Tuple(str, int, int)]]] = \
         [[[] for t in range(sol.max_time + 1)] for h in range(sol.nb_hands)]
@@ -743,7 +505,14 @@ def juggling_sol_to_simulator(sol):
                     .append((ball,
                              dst_hand,
                              item.flying_time))
-    return throws
+
+    balls = []
+    j = 0
+    for ball in sol.balls:
+        balls.append({"color": colors[j], "tone": ball, "name": ball})
+        j += 1
+
+    return balls, throws
 
 
 # ============================================================================ #
