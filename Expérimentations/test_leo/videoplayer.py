@@ -9,6 +9,7 @@ class VideoType(Enum):
 class VideoPlayer:
     def __init__(self, source, debug=True):
         self.cap = cv2.VideoCapture(source)
+        self.width, self.height = self.get_dim()
         self.paused = False
         self.frame = None
         self.loop = True

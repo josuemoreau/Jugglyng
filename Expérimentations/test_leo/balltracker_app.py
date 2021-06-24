@@ -122,10 +122,44 @@ class BallTracker():
         self.halt = False
         self.halt_foo = None
         self.halt_args = dict()
+
+        #Attributs pour utiliser les thresholds de détection
+        self.draw_lines = False
+        self.moving_line_x = False
+        self.moving_line_y = False
+        self.line_x = 0
+        self.line_y = 0
+        self.line_color = (0, 255, 255)
+        self.line_thickness = 5
+        self.line_eps = 2*self.line_thickness
         
         if data_path is not None:
-            self.load_balls(data_path)
+            self.load_config(data_path)
+    
+    def mouse_event_thresholds(self, event, x, y, flags, param):
+        if not self.draw_lines:
+            return
+
+        if event == cv2.EVENT_LBUTTONDOWN:
+            if abs(self.line_x - x) < self.line_eps:
+                self.moving_line_x = True
+            if abs(self.line_y - y) < self.line_eps:
+                self.moving_line_y = True
+            
+        elif event == cv2.EVENT_MOUSEMOVE:
+            if self.moving_line_x:
+                self.line_x = x
+                self.line_x = max(0, self.line_x)
+                self.line_x = min(self.vp.width, self.line_x)
+            if self.moving_line_y:
+                self.line_y = y
+                self.line_y = max(0, self.line_y)
+                self.line_y = min(self.vp.height, self.line_y)
         
+        elif event == cv2.EVENT_LBUTTONUP:
+            self.moving_line_x = False
+            self.moving_line_y = False
+
     def get_ball_properties_from_widget(self):
         name = self.widgets["name_ball"].value
         lower_hsv  = (self.widgets["h_low"].value, self.widgets["s_low"].value,
@@ -181,17 +215,21 @@ class BallTracker():
         self.widgets["tracked"].value = ball.tracked
     
 
-    def save_balls(self, path):
-        data = [self.balls[name].to_dict() for name in self.dropdown.options]
+    def save_config(self, path):
+        data = {'balls' : [self.balls[name].to_dict() for name in self.dropdown.options],
+                'thresholds' : [self.line_x, self.line_y]}
         with open(path, 'w') as f:
             json.dump(data, f)
         
-    def load_balls(self, path):
+    def load_config(self, path):
         with open(path, 'r') as f:
             data = json.load(f)
+
+        self.line_x, self.line_y = data['thresholds']
+
         options = []
         self.balls = dict()
-        for ball_data in data:
+        for ball_data in data['balls']:
             ball = Ball.from_dict(ball_data)
             self.balls[ball.name] = ball
             options.append(ball.name)
@@ -293,6 +331,7 @@ class BallTracker():
 
     def run(self): #Runs on thread
         cv2.namedWindow(self.window_name, cv2.WINDOW_NORMAL)
+        cv2.setMouseCallback(self.window_name, self.mouse_event_thresholds)
         while True:
             #Cas où une fonction qu'on peut appeler dynamiquement à besoin d'être traitée avant le traitement
             if self.halt:
@@ -317,6 +356,13 @@ class BallTracker():
                 raise ValueError("{} n'est pas un mode reconnu.".format(self.mode))
 
             frame_to_draw = original_frame if self.only_video else frame
+
+            if self.draw_lines:
+                cv2.line(frame_to_draw, (0, self.line_y), (self.vp.width, self.line_y),
+                         self.line_color, self.line_thickness)
+                cv2.line(frame_to_draw, (self.line_x, 0), (self.line_x, self.vp.height),
+                         self.line_color, self.line_thickness)
+
             cv2.imshow(self.window_name, frame_to_draw)
 
             speed = self.widgets["speed"].value
@@ -327,7 +373,9 @@ class BallTracker():
             elif k == ord('p'):
                 self.vp.pause()
             elif k == ord('t'):
-                self.only_video = not(self.only_video)   
+                self.only_video = not(self.only_video) 
+            elif k == ord('l'):
+                self.draw_lines = not(self.draw_lines) 
             #elif k == ord('s'):
             #    self.switch_id = (self.switch_id + 1) % len(self.switch_list)
             elif k == ord('m') and not self.save_tracking:
@@ -383,11 +431,11 @@ class BallTracker():
                 cv2.CHAIN_APPROX_SIMPLE)
             cnts = imutils.grab_contours(cnts)
             center = None
-            # only proceed if at least one contour was found
-            if len(cnts) > 0:
-                # find the largest contour in the mask, then use it to compute the minimum 
-                # enclosing circle and centroid
-                c = max(cnts, key=cv2.contourArea)
+            # find the largest contour in the mask, then use it to compute the minimum 
+            # enclosing circle and centroid
+            cnts.sort(key = cv2.contourArea)
+            cnts = cnts[:ball.count]
+            for c in cnts:
                 ((x, y), radius) = cv2.minEnclosingCircle(c)
                 M = cv2.moments(c)
                 center = (int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"]))
@@ -396,10 +444,13 @@ class BallTracker():
                     # draw the circle and centroid on the frame, then update the list of tracked points
                     if not self.only_video :
                         cv2.circle(frame, (int(x), int(y)), int(radius), (0, 255, 255), 2)
-            # update the points queue
-            ball.trail.appendleft(center)
-            
-            if self.save_tracking and not self.vp.paused:
+
+            # update the points queue.
+            # DEGEULASSE : on n'affiche le trail que si on ne traque qu'une balle de la couleur donnée
+            if ball.count == 1:
+                ball.trail.appendleft(center)
+        
+            if self.save_tracking and not self.vp.paused: #A FAIRE
                 if center is None:
                     ball.data[video_time] = (float('nan'), float('nan'))
                 else:
@@ -417,4 +468,3 @@ class BallTracker():
 
         #t = [frame, blurred, hsv]
         return frame
-            
