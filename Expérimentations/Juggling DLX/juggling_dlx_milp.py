@@ -330,10 +330,7 @@ def solve_exact_cover_with_milp(ec_instance: ExactCoverInstance,
     # colonne
     d: Dict[Union[Item, Tuple[Item, int]],
             List[int]] \
-        = {item: [] for item in ec_instance.x_items + ec_instance.l_items
-            + ec_instance.w_items + ec_instance.i_items
-            + ec_instance.m_items + ec_instance.d_items
-            + ec_instance.u_items}
+        = {item: [] for item in ec_instance.prim_items}
     for i in range(len(ec_instance.rows)):
         row = ec_instance.rows[i]
         for item in row:
@@ -349,58 +346,63 @@ def solve_exact_cover_with_milp(ec_instance: ExactCoverInstance,
 
     # Génération de l'instance de MILP
     x = p.new_variable(binary=True)
-    for item in ec_instance.x_items:
+    for item in ec_instance.prim_items:
         if len(d[item]) > 0:
             rows_vars = [x[i] for i in d[item]]
-            if item.flying_time in {3, 4, 5}:  # Maximisation des lancers 3/4/5
-                max_expr += sum(rows_vars)
-            elif item.flying_time in {6, 7}:  # Minimisation des lancers 6/7
-                min_expr += sum(rows_vars)
-                min_high += len(rows_vars)
-            p.add_constraint(ec_instance.x_items_bounds[0]
+            if isinstance(item, XItem):
+                if item.flying_time in {3, 4, 5}:  # Maximisation des lancers 3/4/5
+                    max_expr += sum(rows_vars)
+                elif item.flying_time in {6, 7}:  # Minimisation des lancers 6/7
+                    min_expr += sum(rows_vars)
+                    min_high += len(rows_vars)
+            elif isinstance(item, DItem):
+                d_expr[(item.time, item.hand)] = sum(rows_vars)
+            p.add_constraint(item.bounds[0]
                              <= sum(rows_vars)
-                             <= ec_instance.x_items_bounds[1])
-    for item in ec_instance.l_items:
-        if len(d[item]) > 0:
-            rows_vars = [x[i] for i in d[item]]
-            p.add_constraint(ec_instance.l_items_bounds[0]
-                             <= sum(rows_vars)
-                             <= ec_instance.l_items_bounds[1])
-    for item in ec_instance.w_items:
-        if len(d[item]) > 0:
-            rows_vars = [x[i] for i in d[item]]
-            p.add_constraint(ec_instance.w_items_bounds[0]
-                             <= sum(rows_vars)
-                             <= ec_instance.w_items_bounds[1])
-    for item in ec_instance.i_items:
-        if len(d[item]) > 0:
-            rows_vars = [x[i] for i in d[item]]
-            p.add_constraint(ec_instance.i_items_bounds[0]
-                             <= sum(rows_vars)
-                             <= ec_instance.i_items_bounds[1])
-    for item in ec_instance.m_items:
-        if len(d[item]) > 0:
-            rows_vars = [x[i] for i in d[item]]
-            p.add_constraint(ec_instance.m_items_bounds[item.multiplex][0]
-                             <= sum(rows_vars)
-                             <= ec_instance.m_items_bounds[item.multiplex][1])
-    for item in ec_instance.d_items:
-        if len(d[item]) > 0:
-            rows_vars = [x[i] for i in d[item]]
-            dvar = sum(rows_vars)
-            d_expr[(item.time, item.hand)] = dvar
-            p.add_constraint(ec_instance.d_items_bounds[0]
-                             <= dvar
-                             <= ec_instance.d_items_bounds[1])
-        else:
-            dvar = 0
-            d_expr[(item.time, item.hand)] = dvar
-    for item in ec_instance.u_items:
-        if len(d[item]) > 0:
-            row_vars = [x[i] for i in d[item]]
-            p.add_constraint(ec_instance.u_items_bounds[0]
-                             <= sum(row_vars)
-                             <= ec_instance.u_items_bounds[1])
+                             <= item.bounds[1])
+        elif isinstance(item, DItem):
+            d_expr[(item.time, item.hand)] = 0
+    # for item in ec_instance.l_items:
+    #     if len(d[item]) > 0:
+    #         rows_vars = [x[i] for i in d[item]]
+    #         p.add_constraint(ec_instance.l_items_bounds[0]
+    #                          <= sum(rows_vars)
+    #                          <= ec_instance.l_items_bounds[1])
+    # for item in ec_instance.w_items:
+    #     if len(d[item]) > 0:
+    #         rows_vars = [x[i] for i in d[item]]
+    #         p.add_constraint(ec_instance.w_items_bounds[0]
+    #                          <= sum(rows_vars)
+    #                          <= ec_instance.w_items_bounds[1])
+    # for item in ec_instance.i_items:
+    #     if len(d[item]) > 0:
+    #         rows_vars = [x[i] for i in d[item]]
+    #         p.add_constraint(ec_instance.i_items_bounds[0]
+    #                          <= sum(rows_vars)
+    #                          <= ec_instance.i_items_bounds[1])
+    # for item in ec_instance.m_items:
+    #     if len(d[item]) > 0:
+    #         rows_vars = [x[i] for i in d[item]]
+    #         p.add_constraint(ec_instance.m_items_bounds[item.multiplex][0]
+    #                          <= sum(rows_vars)
+    #                          <= ec_instance.m_items_bounds[item.multiplex][1])
+    # for item in ec_instance.d_items:
+    #     if len(d[item]) > 0:
+    #         rows_vars = [x[i] for i in d[item]]
+    #         dvar = sum(rows_vars)
+    #         d_expr[(item.time, item.hand)] = dvar
+    #         p.add_constraint(ec_instance.d_items_bounds[0]
+    #                          <= dvar
+    #                          <= ec_instance.d_items_bounds[1])
+    #     else:
+    #         dvar = 0
+    #         d_expr[(item.time, item.hand)] = dvar
+    # for item in ec_instance.u_items:
+    #     if len(d[item]) > 0:
+    #         row_vars = [x[i] for i in d[item]]
+    #         p.add_constraint(ec_instance.u_items_bounds[0]
+    #                          <= sum(row_vars)
+    #                          <= ec_instance.u_items_bounds[1])
 
     if optimize:
         # Minimisation du nombre de lancers en même temps depuis des mains
