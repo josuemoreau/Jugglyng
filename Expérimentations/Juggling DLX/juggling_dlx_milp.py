@@ -499,8 +499,13 @@ def juggling_sol_to_simulator(sol, colors):
                 land_time = item.throw.time + item.throw.max_height
                 throw_time = land_time - item.flying_time
                 src_hand = item.hand
-                dst_hand = \
-                    hand[land_time][ball] if ball in hand[land_time] else 1 - src_hand
+                if ball in hand[land_time]:
+                    dst_hand = hand[land_time][ball]
+                else:
+                    for h in range(sol.nb_hands):
+                        if h != src_hand:
+                            dst_hand = h
+                            break
                 throws[src_hand][throw_time] \
                     .append((ball,
                              dst_hand,
