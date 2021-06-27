@@ -586,33 +586,33 @@ let fig_automate =
    ])
 
 let fig_automate_musical =
-  let emp = Box.tex "" in
   let s n = state ~name:n n in
-  let states = Box.tabularl ~hpadding:(cm 2.0) ~vpadding:(cm 1.0) [
-      [s "0 ré 0 do"; emp; emp];
-      [s "do 0 ré 0"; s "0 ré do 0"; emp];
-      [s "ré do 0 0"; s "do 0 0 ré"; s "0 0 ré do"];
-      [s "do ré 0 0"; s "ré 0 0 do"; s "0 0 do ré"];
-      [s "ré 0 do 0"; s "0 do ré 0"; emp];
-      [s "0 do 0 ré"; emp; emp]
+  let matrix x = "$\\begin{array}{cccc} " ^ x ^ " \\end{array}$" in
+  let s1 = matrix "\\{$do$\\} & \\emptyset & \\emptyset & \\emptyset \\\\ \\emptyset & \\{$ré$\\} & \\emptyset & \\emptyset" in
+  let s2 = matrix "\\{$do$\\} & \\emptyset & \\emptyset & \\emptyset \\\\ \\{$ré$\\} & \\emptyset & \\emptyset & \\emptyset" in
+  let s3 = matrix "\\emptyset & \\emptyset & \\emptyset & \\emptyset \\\\ \\{$do, ré$\\} & \\emptyset & \\emptyset & \\emptyset" in
+  let s4 = matrix "\\emptyset & \\{$do$\\} & \\emptyset & \\emptyset \\\\ \\{$ré$\\} & \\emptyset & \\emptyset & \\emptyset" in
+  let s5 = matrix "\\emptyset & \\emptyset & \\emptyset & \\emptyset \\\\ \\{$ré$\\} & \\emptyset & \\{$do$\\} & \\emptyset" in
+  let s6 = matrix "\\emptyset & \\emptyset & \\emptyset & \\emptyset \\\\ \\{$ré$\\} & \\{$do$\\} & \\emptyset & \\emptyset" in
+  let states = Box.tabularl ~hpadding:(cm 2.0) ~vpadding:(cm 3.0) [
+      [s s5; s s1; s s2];
+      [s s6; s s3; s s4]
     ] in
   ("automate_musical",
    seq [
      Box.draw states;
-     transition states "0" `West "0 ré 0 do" "ré 0 do 0" ~ind:0.0;
-     transition states "1" `West "do 0 ré 0" "do ré 0 0" ~ind:(-10.0);
-     transition states "3" `North "do 0 ré 0" "0 ré do 0";
-     transition states "4" `West "do 0 ré 0" "0 ré 0 do";
-     transition states "2" `West "ré do 0 0" "do ré 0 0" ~ind:(-50.0);
-     transition states "3" `West "ré do 0 0" "do 0 ré 0";
-     transition states "4" `North "ré do 0 0" "do 0 0 ré";
-     transition states "2" `East "do ré 0 0" "ré do 0 0" ~ind:130.0;
-     transition states "3" `West "do ré 0 0" "ré 0 do 0";
-     transition states "4" `North "do ré 0 0" "ré 0 0 do";
-     transition states "1" `West "ré 0 do 0" "ré do 0 0" ~ind:10.0;
-     transition states "3" `North "ré 0 do 0" "0 do ré 0";
-     transition states "4" `West "ré 0 do 0" "0 do 0 ré";
-     transition states "0" `West "0 do 0 ré" "do 0 ré 0" ~ind:0.0;
+     transition states "$1_{\\textrm{do}, 0}$" `North s1 s2 ~ind:(-10.0);
+     transition states "$1_{\\textrm{do}, 1}$" `East s1 s3 ~ind:(-110.0);
+     transition states "$2_{\\textrm{do}, 0}$" `Northeast s1 s4 ~ind:(-50.0);
+     transition states "$3_{\\textrm{do}, 1}$" `North s1 s5;
+     transition states "$1_{\\textrm{do}, 0}, 2_{\\textrm{ré}, 1}$" `South s2 s1 ~ind:(170.0);
+     transition states "$2_{\\textrm{do}, 0}, 1_{\\textrm{ré}, 1}$" `East s2 s4 ~ind:(-110.0);
+     transition states "$1_{\\textrm{do}, 0}, 2_{\\textrm{ré}, 1}$" `West s3 s1 ~ind:(70.0);
+     transition states "$2_{\\textrm{do}, 0}, 1_{\\textrm{ré}, 1}$" `South s4 s3;
+     transition states "$1_{\\textrm{ré}, 1}$" `West s4 s2 ~ind:(70.0);
+     transition states "$2_{\\textrm{ré}, 1}$" `South s4 s1 ~ind:(130.0);
+     transition states "$1_{\\textrm{ré}, 1}$" `West s5 s6;
+     transition states "$1_{\\textrm{ré}, 1}$" `South s6 s3;
    ])
 
 let () =
@@ -625,4 +625,6 @@ let () =
     fig_pre_traitement; fig_pre_traitement_timeline;
     fig_automate; fig_automate_musical
   ] in
-  List.iteri (fun i (name, x) -> Metapost.emit ("figure-" ^ name) x) figs
+  List.iteri (fun i (name, x) -> Metapost.emit ("figure-" ^ name) x) figs;
+
+  Metapost.dump ~pdf:true "figs"

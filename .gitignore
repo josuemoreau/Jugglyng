@@ -24,3 +24,7 @@ Documents/Rapport_Josué/main.out
 Documents/Rapport_Josué/main.pdf
 
 *.mps
+
+Documents/Rapport_Josué/slidefigs/
+
+Documents/Rapport_Josué/*.pdf
