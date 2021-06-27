@@ -15,7 +15,7 @@ automata-output/
 
 *.avi
 
-*.mp4
+Expérimentations/*.mp4
 
 Expérimentations/full_table.fdb_latexmk
 
