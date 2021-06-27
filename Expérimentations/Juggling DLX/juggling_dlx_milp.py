@@ -461,10 +461,21 @@ def solve_and_simulate(music, nb_hands, max_height, max_weight, forbidden_multip
     balls, pattern = juggling_sol_to_simulator(sol, colors)
 
     model = modele.Model(balls, pattern)
-    slider = ipywidgets.FloatSlider(min=0, max=40, step=0.05)
+    # slider = ipywidgets.FloatSlider(min=0, max=40, step=0.05)
+    play = ipywidgets.Play(
+        value=0,
+        min=0,
+        max=4000,
+        step=5,
+        interval=30,
+        description="Press play",
+        disabled=False
+    )
+    slider = ipywidgets.IntSlider(min=0, max=4000)
+    ipywidgets.jslink((play, 'value'), (slider, 'value'))
     view = modele.View(model, sides)
-    slider.observe(lambda change: view.update(change['new'], change['old']), names="value")
-    return ipywidgets.VBox([view.widget, slider])
+    slider.observe(lambda change: view.update(change['new'] / 100, change['old'] / 100), names="value")
+    return ipywidgets.VBox([view.widget, ipywidgets.HBox([play, slider])])
 
 
 # ============================================================================ #
