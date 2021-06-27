@@ -1,58 +1,10 @@
 from recordclass import StructClass
 from typing import List, Dict, Tuple, Union, Set, Any
-from sage.all import MixedIntegerLinearProgram, OrderedSetPartitions, \
-    cartesian_product, Arrangements
+from sage.all import MixedIntegerLinearProgram
 from DLX.dlxm import DLXM
 
 from pylatex import Document
 from pylatex.utils import NoEscape
-
-
-def InsertAtEachPosition(l, e):
-    for i in range(0, len(l) + 1):
-        l1 = l.copy()
-        l1.insert(i, e)
-        yield l1
-
-
-def EmpOrderedSetPartitions(s, k):
-    for p in OrderedSetPartitions(s, k):
-        yield p
-    for i in range(k - 1, 0, -1):
-        P = OrderedSetPartitions(s, i)
-        for p in P:
-            L = [list(p)]
-            for j in range(0, k - i):
-                L1 = []
-                for pl in L:
-                    e = set()
-                    l1 = list(InsertAtEachPosition(pl, e))
-                    L1 = L1 + l1
-                L = L1
-            for l in L:
-                yield l
-
-
-def HandsConfigurations(balls, nb_hands):
-    L = []
-    for p in EmpOrderedSetPartitions(balls, nb_hands):
-        for config in cartesian_product([Arrangements(s, len(s)) for s in p]):
-            L.append(tuple([tuple(hand_config) for hand_config in config]))
-    return L
-
-
-def next_configs(config):
-    hands_next_configs = [[] for _ in range(len(config))]
-    for hand in range(len(config)):
-        n = len(config[hand])
-        ch = config[hand]
-        if n <= 1 or n == 4:
-            hands_next_configs[hand].append(tuple(ch))
-        elif n == 2 or n == 3:
-            hands_next_configs[hand].append(tuple([ch[(i + 1) % n] for i in range(n)]))
-        else:
-            hands_next_configs[hand].append(tuple(ch))
-    return [tuple([tuple(hand_config) for hand_config in config]) for config in cartesian_product(hands_next_configs)]
 
 
 class Throw(StructClass):
