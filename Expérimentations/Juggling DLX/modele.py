@@ -12,6 +12,7 @@ information and managing sound.
 """
 
 import copy
+import os
 import collections
 from audio import Audio
 from recordclass import RecordClass
@@ -80,7 +81,7 @@ class Model:
 
         for number, ball_prop in enumerate(ball_properties):
             if "tone" in ball_prop:
-                tone = "../../sounds/{}.wav".format(ball_prop["tone"])
+                tone = "sounds/{}.wav".format(ball_prop["tone"])
             else:
                 tone = None
             if "color" in ball_prop:

@@ -1,12 +1,16 @@
 from IPython.display import display
 import base64
+import os
 import jp_proxy_widget
+
+
+_dirname = os.path.dirname(os.path.abspath(__file__))
 
 
 class Audio():
     def __init__(self, filename):
         self.widget = jp_proxy_widget.JSProxyWidget()
-        self.js = "howler.js"
+        self.js = _dirname + "/howler.js"
 
         self.widget.load_js_files([self.js])
 
