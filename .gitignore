@@ -13,6 +13,10 @@ automata-output/
 
 *.aux
 
+*.avi
+
+*.mp4
+
 Expérimentations/full_table.fdb_latexmk
 
 Expérimentations/full_table.fls
@@ -46,8 +50,6 @@ Expérimentations/Juggling DLX/DLX/dlx_m
 *.so
 
 *.webm
-
-*.mp4
 
 Documents/Notes Josué/Suite Dancing Links.pdf
 
