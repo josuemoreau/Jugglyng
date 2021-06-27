@@ -64,7 +64,6 @@ class BallTracker():
         button_layout = widgets.Layout(width = '40px')
         
         #Widgets HSV_FINDER
-        #Utiliser des IntRangeSlider ?
         h_low  = widgets.IntSlider(value=0, min=0, max=179, description='h_low:', layout=layout)
         s_low  = widgets.IntSlider(value=0, min=0, max=255, description='s_low:', layout=layout)
         v_low  = widgets.IntSlider(value=0, min=0, max=255, description='v_low:', layout=layout)
@@ -83,6 +82,63 @@ class BallTracker():
         
         ball_count = widgets.IntSlider(value=1, min=0, max=3, description='count :', layout=layout)
         tracked = widgets.Checkbox(value=True, description='Tracked')
+
+        play = widgets.ToggleButtons(options = [('', 0), (' ', 1), ('  ', 2)], value=0,
+                icons=['play', 'pause', 'stop'], button_style='info',
+                style=widgets.ToggleButtonsStyle(button_width='40px'))
+        
+        toggle = widgets.ToggleButton(value = True, description = 'Processing shown',
+    icon='eye',
+    button_style='warning',
+    layout=widgets.Layout(width='150px')
+)
+        modes = widgets.ToggleButtons(options = [('Color Picker  ', 0), ('Ball Tracker  ', 1)], value=0,
+              icons=['paint-brush', 'bullseye'],
+              button_style='warning',
+              style=widgets.ToggleButtonsStyle(button_width='150px'))
+
+        lines = widgets.ToggleButton(
+    description = 'Thresholds hidden',
+    icon='arrows',
+    button_style='warning',
+    layout=widgets.Layout(width='150px')
+)
+        def play_observe(change):
+            value = change['new']
+            if value == 0 or value == 1:
+                self.vp.pause()
+            else: #value == 2
+                self.stop()
+        
+        def toggle_observe(change):
+            self.only_video = not(self.only_video)
+            widget = self.widgets['toggle']
+            if not change["new"]:
+                widget.icon = 'eye-slash'
+                widget.description = 'Processing hidden'
+            else:
+                widget.icon = 'eye'
+                widget.description = 'Processing shown'
+        
+        def modes_observe(change):
+            if not self.save_tracking: #A fixer un jour
+                if self.mode == Mode.HSV_FINDER:
+                    self.mode = Mode.BALL_TRACKER
+                elif self.mode == Mode.BALL_TRACKER:
+                    self.mode = Mode.HSV_FINDER
+
+        def lines_observe(change):
+            self.draw_lines = not(self.draw_lines)
+            widget = self.widgets['lines']
+            if change["new"]:
+                lines.description = 'Thresholds shown'
+            else:
+                lines.description = 'Thresholds hidden'
+
+        play.observe(lambda change : play_observe(change), names='value')
+        toggle.observe(lambda change : toggle_observe(change), names='value')
+        modes.observe(lambda change : modes_observe(change), names='value')
+        lines.observe(lambda change : lines_observe(change), names='value')
         
         dropdown = widgets.Dropdown(description='Balls :', options=[])
         dropdown.observe(lambda change : self.dropdown_observe(change), names="value")
@@ -92,7 +148,7 @@ class BallTracker():
         
         upload_balls.on_click(lambda b : self.upload_balls())
         download_balls.on_click(lambda b : self.download_balls())"""
-        
+
         #Widgets BALL_TRACKER
         #...
         
@@ -103,8 +159,10 @@ class BallTracker():
                        "h_high" : h_high, "s_high" : s_high, "v_high" : v_high,
                        "speed" : speed, "name_ball" : name_ball, "add_ball" : add_ball,
                        "remove_ball" : remove_ball, "modify_ball" : modify_ball,
-                       "ball_count" : ball_count, "tracked" : tracked,
-                       "dropdown" : dropdown}
+                       "ball_count" : ball_count,
+                       "tracked" : tracked,
+                       "dropdown" : dropdown,
+                       "play" : play, "toggle" : toggle, "modes" : modes, "lines" : lines}
         self.dropdown = dropdown #A SUPPRIMER ? 
         self.balls = dict()
         
@@ -135,7 +193,7 @@ class BallTracker():
         
         if data_path is not None:
             self.load_config(data_path)
-    
+
     def mouse_event_thresholds(self, event, x, y, flags, param):
         if not self.draw_lines:
             return
@@ -237,7 +295,7 @@ class BallTracker():
     
     def display(self):
         #Faire avec Out à l'avenir
-        display(
+        """display(
             widgets.VBox([
                 self.widgets["h_low"],
                 self.widgets["s_low"],
@@ -256,6 +314,38 @@ class BallTracker():
                 self.widgets["ball_count"],
                 self.widgets["tracked"],
                 self.widgets["dropdown"]
+            ])
+        )"""
+        display(
+            widgets.VBox([
+                widgets.HBox([
+                    self.widgets["play"],
+                    self.widgets["speed"],
+                    widgets.Label("faster <---> slower")
+                ]),
+                widgets.HBox([
+                    widgets.Label("Choose mode :"),
+                    self.widgets["modes"]
+                ]),
+                widgets.HBox([
+                    self.widgets["toggle"],
+                    self.widgets["lines"]
+                ]),
+                self.widgets["dropdown"],
+                widgets.HBox([
+                    widgets.Label("Balle :"),
+                    self.widgets["name_ball"],
+                    self.widgets["add_ball"],
+                    self.widgets["remove_ball"],
+                    self.widgets["modify_ball"]
+                ]),
+                self.widgets["tracked"],
+                self.widgets["h_low"],
+                self.widgets["s_low"],
+                self.widgets["v_low"],
+                self.widgets["h_high"],
+                self.widgets["s_high"],
+                self.widgets["v_high"]
             ])
         )
     
@@ -447,7 +537,7 @@ class BallTracker():
 
             # update the points queue.
             # DEGEULASSE : on n'affiche le trail que si on ne traque qu'une balle de la couleur donnée
-            if ball.count == 1:
+            if ball.count == 1 and not self.vp.paused:
                 ball.trail.appendleft(center)
         
             if self.save_tracking and not self.vp.paused: #A FAIRE
