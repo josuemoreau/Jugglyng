@@ -349,17 +349,17 @@ class BallTracker():
             ])
         )
     
-    def start_data(self, path=None):
+    def start_saving(self, path=None):
         self.halt = True
-        self.halt_foo = self._start_data
+        self.halt_foo = self._start_saving
         self.halt_args = {"path" : path}
     
-    def stop_data(self):
+    def stop_saving(self):
         self.halt = True
-        self.halt_foo = self._stop_data
+        self.halt_foo = self._stop_saving
         self.halt_args = dict()
 
-    def _start_data(self, path=None): 
+    def _start_saving(self, path=None): 
         if self.save_tracking:
             print("Tracking déjà en cours.")
             return
@@ -389,7 +389,7 @@ class BallTracker():
     #Corriger ball trail quand loop ou pause ?
     #Réalisation que les CENTROIDS SONT TRAQUES, pas le centre de la balle...
 
-    def _stop_data(self): #FONCTIONNE UNIQUEMENT AVEC WEBCAM
+    def _stop_saving(self): #FONCTIONNE UNIQUEMENT AVEC WEBCAM
         if not self.save_tracking:
             print("Tracking non démarré.")
             return
@@ -410,14 +410,14 @@ class BallTracker():
             print("started")
         else: #Pour aider au débuggage. Ignorer sinon.
             self.load_balls(path='test_train.json')
-            self.start_data(path='test_train.avi')
+            self.start_saving(path='test_train.avi')
             print("started")
             self.run()
     
     def stop(self):
         self.mode = Mode.QUIT
         if self.save_tracking:
-            self._stop_data()
+            self._stop_saving()
 
     def run(self): #Runs on thread
         cv2.namedWindow(self.window_name, cv2.WINDOW_NORMAL)
