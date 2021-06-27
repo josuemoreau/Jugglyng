@@ -6,6 +6,10 @@ from DLX.dlxm import DLXM
 from pylatex import Document
 from pylatex.utils import NoEscape
 
+import modele
+import ipywidgets
+import pythreejs
+
 
 class Throw(StructClass):
     ball: str
@@ -160,7 +164,6 @@ class ExactCoverSolution(StructClass):
 def throws_to_extended_exact_cover(balls: Set[str], throws: List[List[Throw]],
                                    nb_hands: int, H: int, max_weight: int,
                                    forbidden_multiplex: List[Tuple[int, ]],
-                                   forbidden_2sequences: List[Tuple[int, int]],
                                    multiple_throws: bool) \
         -> ExactCoverInstance:
     max_time = 0
@@ -175,15 +178,11 @@ def throws_to_extended_exact_cover(balls: Set[str], throws: List[List[Throw]],
     colors = {}
     fmultiplex: Dict[int, List[Tuple[int, ]]] = {i: [] for i in range(1, H + 1)}
     fflying_time = []
-    f2seqs: Dict[int, List[int]] = {i: [] for i in range(1, H + 1)}
     rows = []
     # Remplissage du dictionnaire des lancers multiplex interdits
     for fm in forbidden_multiplex:
         for i in fm:
             fmultiplex[i].append(fm)
-    # Remplissage du dictionnaire des séquences de 2 lancers interdits
-    for fs in forbidden_2sequences:
-        f2seqs[fs[0]].append(fs[1])
     # Calcul du plus tard temps où atterrit une balle
     for t in range(len(throws) - 1, -1, -1):
         if len(throws[t]) > 0:
@@ -314,47 +313,6 @@ def solve_exact_cover_with_milp(ec_instance: ExactCoverInstance,
                              <= item.bounds[1])
         elif isinstance(item, DItem):
             d_expr[(item.time, item.hand)] = 0
-    # for item in ec_instance.l_items:
-    #     if len(d[item]) > 0:
-    #         rows_vars = [x[i] for i in d[item]]
-    #         p.add_constraint(ec_instance.l_items_bounds[0]
-    #                          <= sum(rows_vars)
-    #                          <= ec_instance.l_items_bounds[1])
-    # for item in ec_instance.w_items:
-    #     if len(d[item]) > 0:
-    #         rows_vars = [x[i] for i in d[item]]
-    #         p.add_constraint(ec_instance.w_items_bounds[0]
-    #                          <= sum(rows_vars)
-    #                          <= ec_instance.w_items_bounds[1])
-    # for item in ec_instance.i_items:
-    #     if len(d[item]) > 0:
-    #         rows_vars = [x[i] for i in d[item]]
-    #         p.add_constraint(ec_instance.i_items_bounds[0]
-    #                          <= sum(rows_vars)
-    #                          <= ec_instance.i_items_bounds[1])
-    # for item in ec_instance.m_items:
-    #     if len(d[item]) > 0:
-    #         rows_vars = [x[i] for i in d[item]]
-    #         p.add_constraint(ec_instance.m_items_bounds[item.multiplex][0]
-    #                          <= sum(rows_vars)
-    #                          <= ec_instance.m_items_bounds[item.multiplex][1])
-    # for item in ec_instance.d_items:
-    #     if len(d[item]) > 0:
-    #         rows_vars = [x[i] for i in d[item]]
-    #         dvar = sum(rows_vars)
-    #         d_expr[(item.time, item.hand)] = dvar
-    #         p.add_constraint(ec_instance.d_items_bounds[0]
-    #                          <= dvar
-    #                          <= ec_instance.d_items_bounds[1])
-    #     else:
-    #         dvar = 0
-    #         d_expr[(item.time, item.hand)] = dvar
-    # for item in ec_instance.u_items:
-    #     if len(d[item]) > 0:
-    #         row_vars = [x[i] for i in d[item]]
-    #         p.add_constraint(ec_instance.u_items_bounds[0]
-    #                          <= sum(row_vars)
-    #                          <= ec_instance.u_items_bounds[1])
 
     if optimize:
         # Minimisation du nombre de lancers en même temps depuis des mains
@@ -472,6 +430,41 @@ def juggling_sol_to_simulator(sol, colors):
         j += 1
 
     return balls, throws
+
+
+def solve_and_print(music, nb_hands, max_height, max_weight, forbidden_multiplex, method="DLX", optimize=True):
+    balls, throws = music_to_throws(music)
+    ec_instance = throws_to_extended_exact_cover(balls, throws, nb_hands, max_height, max_weight,
+                                                 forbidden_multiplex, True)
+    sol = None
+    if method == "DLX":
+        sol = get_solution_with_dlx(ec_instance)
+    elif method == "MILP":
+        sol = solve_exact_cover_with_milp(ec_instance, optimize)
+    if len(sol) == 0:
+        raise RuntimeError("No solution.")
+
+    print_juggling(sol)
+
+
+def solve_and_simulate(music, nb_hands, max_height, max_weight, forbidden_multiplex, colors, sides, method="DLX", optimize=True):
+    balls, throws = music_to_throws(music)
+    ec_instance = throws_to_extended_exact_cover(balls, throws, nb_hands, max_height, max_weight,
+                                                 forbidden_multiplex, True)
+    sol = None
+    if method == "DLX":
+        sol = get_solution_with_dlx(ec_instance)
+    elif method == "MILP":
+        sol = solve_exact_cover_with_milp(ec_instance, optimize)
+    if len(sol) == 0:
+        raise RuntimeError("No solution.")
+    balls, pattern = juggling_sol_to_simulator(sol, colors)
+
+    model = modele.Model(balls, pattern)
+    slider = ipywidgets.FloatSlider(min=0, max=40, step=0.05)
+    view = modele.View(model, sides)
+    slider.observe(lambda change: view.update(change['new'], change['old']), names="value")
+    return ipywidgets.VBox([view.widget, slider])
 
 
 # ============================================================================ #
