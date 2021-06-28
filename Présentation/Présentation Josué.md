@@ -82,27 +82,82 @@ $$
 <!-- #endregion -->
 
 <center>
-    <video id="intro_video" controls height="500" src="vincent_court.mp4"></video>
+    <video id="intro_video" controls height="500" src="vincent_court.mp4" ></video>
 </center>
 
 <!-- #region slideshow={"slide_type": "slide"} -->
-## Modèle de la jonglerie musicale
+## Modèle de la jonglerie
 <!-- #endregion -->
 
-<!-- #region slideshow={"slide_type": "slide"} -->
-### Automate de jonglerie simple
-<!-- #endregion -->
+<!-- #region slideshow={"slide_type": "subslide"} -->
+### Jonglerie simple
+- Une main.
+- Lancers et rattrapages réguliers.
+- Pas de balle en main.
+- Jongle depuis / pour toujours.
+- Balle rattrapée = Balle relancée.
+- 0 ou 1 balle rattrapée à tout temps.
 
-<!-- #region slideshow={"slide_type": "-"} -->
+#### Exemple : Figure 312
+
 <center>
-    <img src="slidefigs/figure-automate.png" alt="drawing" width="900"/>
+    <img src="slidefigs/figure-3_1_2.png" width="1000"/>
+</center>
+<!-- #endregion -->
+
+<!-- #region slideshow={"slide_type": "subslide"} -->
+#### Attention !
+Périodicité pas toujours possible...
+
+<center>
+    <img src="slidefigs/figure-2_3_2.png" width="400"/>
+</center>
+
+<center>
+    <img src="slidefigs/figure-3_0_3_0.png" width="350"/>
+</center>
+<!-- #endregion -->
+
+<!-- #region slideshow={"slide_type": "subslide"} -->
+### Automate de jonglerie simple
+
+<center>
+    <img src="slidefigs/figure-automate.png" width="700"/>
+</center>
+<!-- #endregion -->
+
+<!-- #region slideshow={"slide_type": "subslide"} -->
+### Jonglerie multiplex
+- Plusieurs balles rattrapables / lançables à tout temps.
+
+#### Exemple : Figure [13]20
+
+<center>
+    <img src="slidefigs/figure-13_2_0.png" width="700"/>
+</center>
+<!-- #endregion -->
+
+<!-- #region slideshow={"slide_type": "subslide"} -->
+### Jonglerie multimains
+- Plusieurs mains.
+
+#### Exemple : Figure $\Large\quad\begin{array}{lll}
+        2_0 & 2_1 & 1_2 \\
+        1_0 2_2 & 2_0 & 0 \\
+        [1 3]_1 3_2 & 0 & 1_2
+\end{array}
+$
+
+<center>
+    <img src="slidefigs/figure-multihand.png" width="500"/>
 </center>
 <!-- #endregion -->
 
 <!-- #region slideshow={"slide_type": "slide"} -->
-### Jonglerie musicale
+## Jonglerie musicale
 <!-- #endregion -->
 
+<!-- #region slideshow={"slide_type": "subslide"} -->
 - Plus de répétition des séquences.
 - On ne jongle plus depuis / pour toujours.
 - Distinction des balles dans la main.
@@ -116,8 +171,9 @@ $$\Large
             4_{\nre, 1} & 1_{\ndo, 0} & 0           & 0 & 3_{\nre, 0} & 0 & 3_{\ndo, 0} & 3_{\nmi, 0} & 0           & 0 & 0           & 1_{\nre, 0} 
         \end{pmatrix}
 $$
+<!-- #endregion -->
 
-<!-- #region slideshow={"slide_type": "slide"} -->
+<!-- #region slideshow={"slide_type": "subslide"} -->
 ### Contraintes physiques de la jonglerie
 
 - Hauteur maximale des lancers
@@ -135,7 +191,7 @@ $$
 ## Algorithme de composition
 <!-- #endregion -->
 
-<!-- #region slideshow={"slide_type": "-"} -->
+<!-- #region slideshow={"slide_type": "subslide"} -->
 $$\normalsize
 \{
             ( 0, \ndo), ( 1, \ndo), ( 2, \ndo), 
@@ -152,7 +208,7 @@ $$
 </center>
 <!-- #endregion -->
 
-<!-- #region slideshow={"slide_type": "slide"} -->
+<!-- #region slideshow={"slide_type": "subslide"} -->
 ### Exact Cover
 
 $$\Large
@@ -182,7 +238,7 @@ $$
 Existe-t-il un choix de lignes de $\Large M$ dont la somme est $\Large \begin{pmatrix} 1 & 1 & 1 & 1 \end{pmatrix}$ ?
 <!-- #endregion -->
 
-<!-- #region slideshow={"slide_type": "slide"} -->
+<!-- #region slideshow={"slide_type": "subslide"} -->
 ### Exact Cover avec couleurs et multiplicités
 
 - Éléments primaires : $\Large a, b$
@@ -196,7 +252,7 @@ Existe-t-il un choix de lignes tel que
 - et au plus une couleur est affectée pour chaque élément secondaire ?
 <!-- #endregion -->
 
-<!-- #region slideshow={"slide_type": "slide"} -->
+<!-- #region slideshow={"slide_type": "subslide"} -->
 ### Pré-traitement
 
 $$\large
@@ -220,7 +276,7 @@ $$\large
 $$
 <!-- #endregion -->
 
-<!-- #region slideshow={"slide_type": "slide"} -->
+<!-- #region slideshow={"slide_type": "subslide"} -->
 ### Codage des contraintes
 
 Colonnes d'affectation : $\Large\affect(T(t, b, \hmax), m, h) \in \llbracket 0, 1 \rrbracket$
@@ -249,7 +305,7 @@ $$\Large
 $$
 <!-- #endregion -->
 
-<!-- #region slideshow={"slide_type": "slide"} -->
+<!-- #region slideshow={"slide_type": "subslide"} -->
 ### Codage des contraintes
 
 $\Large\double(t, m, h) \in \llbracket 0, 1 \rrbracket$
@@ -275,7 +331,7 @@ $$\Large
 $$
 <!-- #endregion -->
 
-<!-- #region slideshow={"slide_type": "slide"} -->
+<!-- #region slideshow={"slide_type": "subslide"} -->
 ### Résolution
 
 #### Programmation linéaire
@@ -296,7 +352,7 @@ $$
 #### Dancing Links
 <!-- #endregion -->
 
-<!-- #region slideshow={"slide_type": "slide"} -->
+<!-- #region slideshow={"slide_type": "subslide"} -->
 ### Démonstration
 <!-- #endregion -->
 
@@ -323,7 +379,7 @@ max_weight = 3
 forbidden_multiplex = [(1, 2), (1, 3), (1, 4), (2, )]
 ```
 
-```python slideshow={"slide_type": "slide"}
+```python slideshow={"slide_type": "fragment"}
 solve_and_simulate(music, nb_hands, max_height, max_weight, forbidden_multiplex, colors, sides, method="MILP")
 ```
 
