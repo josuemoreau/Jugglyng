@@ -33,21 +33,11 @@ slideshow:
   slide_type: skip
 ---
 #Penser à régler taille chrome pour en un bouton afficher la vidéo à côté
-```
-
-+++ {"slideshow": {"slide_type": "slide"}}
-
-# Analyse automatique de figures de jonglerie
-
-```{code-cell} ipython3
----
-slideshow:
-  slide_type: fragment
----
 import sys
-sys.path.append('../Expérimentations/test_leo')
-from balltracker_app import *
-from post_detection import *
+import os
+sys.path.insert(1, "Expérimentations/Juggling DLX")
+sys.path.append('Expérimentations/test_leo')
+os.chdir("../")
 %config Completer.use_jedi = False
 %load_ext autoreload
 %autoreload 2
@@ -56,105 +46,152 @@ from post_detection import *
 ```{code-cell} ipython3
 ---
 slideshow:
-  slide_type: subslide
+  slide_type: skip
 ---
-tracker = BallTracker(source='../../videos/vincent_court.mp4')
+from balltracker_app import *
+from post_detection import *
+import modele
+import ipywidgets as widgets
+%matplotlib inline
+```
+
++++ {"slideshow": {"slide_type": "slide"}}
+
+## Modélisation de la jonglerie
+
++++ {"slideshow": {"slide_type": "subslide"}}
+
+### Jonglerie simple
+- Une main.
+- Lancers et rattrapages réguliers.
+- Pas de balle en main.
+- Jongle depuis / pour toujours.
+- Balle rattrapée = Balle relancée.
+- 0 ou 1 balle rattrapée à tout temps.
+
+#### Exemple : Figure 312
+
+<center>
+    <img src="slidefigs/figure-3_1_2.png" width="1000"/>
+</center>
+
++++ {"slideshow": {"slide_type": "subslide"}}
+
+#### Attention !
+Périodicité pas toujours possible...
+
+<center>
+    <img src="slidefigs/figure-2_3_2.png" width="400"/>
+</center>
+
+<center>
+    <img src="slidefigs/figure-3_0_3_0.png" width="350"/>
+</center>
+
++++ {"slideshow": {"slide_type": "subslide"}}
+
+### Automate de jonglerie simple
+
+<center>
+    <img src="slidefigs/figure-automate.png" width="700"/>
+</center>
+
++++ {"slideshow": {"slide_type": "subslide"}}
+
+### Jonglerie multiplex
+- Plusieurs balles rattrapables / lançables à tout temps.
+
+#### Exemple : Figure [13]20
+
+<center>
+    <img src="slidefigs/figure-13_2_0.png" width="700"/>
+</center>
+
++++ {"slideshow": {"slide_type": "subslide"}}
+
+### Jonglerie multihand
+- Plusieurs mains.
+
+#### Exemple : Figure $\begin{array}{lll}
+        2_0 & 2_1 & 1_2 \\
+        1_0 2_2 & 2_0 & 0 \\
+        [1 3]_1 3_2 & 0 & 1_2
+\end{array}
+$
+
+<center>
+    <img src="slidefigs/figure-multihand.png" width="500"/>
+</center>
+
++++ {"slideshow": {"slide_type": "subslide"}}
+
+## Analyse automatique des figures de jonglerie
+
++++ {"slideshow": {"slide_type": "subslide"}}
+
+#### Motivations
+- Faire progresser le modèle.
+- Contraintes humaines :
+    - Outil de composition utilisable par des jongleurs.
+    - Différents jongleurs, différents niveaux, différentes préférences.
+
++++ {"slideshow": {"slide_type": "subslide"}}
+
+### Suivi de balles
+
+```{code-cell} ipython3
+tracker = BallTracker(source='../videos/vincent_court.mp4')  
 tracker.start()
 ```
 
 ```{code-cell} ipython3
-tracker.load_config(path='vincent_court.json')
+#tracker.load_config(path='Présentation/vincent_court.json')
+#tracker.start_saving()
+#tracker.stop_saving()
+#tracker.save_config(path='Présentation/presentation.json') 
 ```
+
++++ {"slideshow": {"slide_type": "subslide"}}
+
+### Données obtenues
 
 ```{code-cell} ipython3
-tracker.start_saving()
+show_all_curves('Présentation/vincent_court.json')
 ```
+
++++ {"slideshow": {"slide_type": "subslide"}}
+
+### Détection des lancers
+Plusieurs types de lancer :
+- Hauteur $\geq 3$, cloche.
+- Hauteur $= 2$, reste en main.
+- Hauteur $= 1$, ligne droite.
+- Hauteur $= 0$, pas de lancer.
+
+Objectif :
+- Différencier cloches / lignes droites.
+- Main de départ / d'arrivée.
+
++++ {"slideshow": {"slide_type": "subslide"}}
+
+|  |<img width="150" src="slidefigs/nicefig1.png"/>|<img width="150" src="slidefigs/nicefig2.png"/>|
+|:-:|:-:|:-:|
+|<img width="150" src="slidefigs/nicefig3.png"/>| Change de main <br /> + <br /> Hauteur $>1$ | Change de main <br /> + <br /> Hauteur $=1$ | 
+|<img width="150" src="slidefigs/nicefig4.png"/> | Même main <br /> + <br /> Hauteur $>1$ | Pas de lancer |
+
++++ {"slideshow": {"slide_type": "subslide"}}
+
+#### Analyse des données précédentes
 
 ```{code-cell} ipython3
-tracker.stop_saving()
-tracker.save_config(path='presentation.json')
+lancers = find_throws('Présentation/vincent_court.json', ball_name = "Bleu")
+lancers
 ```
 
-```{code-cell} ipython3
----
-slideshow:
-  slide_type: subslide
----
-%matplotlib notebook
-show_all_curves('presentation.json')
-```
++++ {"slideshow": {"slide_type": "subslide"}}
 
-```{code-cell} ipython3
----
-slideshow:
-  slide_type: subslide
----
-find_throws('presentation.json', ignore_nan=False)
-```
+## Quelques mots pour la fin...
 
-```{code-cell} ipython3
-from IPython.display import Video
-Video("../../videos/vincent_court.mp4", height=500)
-```
++++ {"slideshow": {"slide_type": "subslide"}}
 
-```{code-cell} ipython3
-from IPython.display import HTML
-
-a = HTML("""
-<video alt="test" controls height="500" id="theVideo" muted>
-  <source src="vincent_court.mp4">
-</video>
-
-<script>
-video = document.getElementById("theVideo");
-video.playbackRate = 0.5;
-</script>
-""")
-```
-
-```{code-cell} ipython3
-%matplotlib inline
-import matplotlib.pyplot as plt
-import ipywidgets as widgets
-import numpy as np
-
-out1 = widgets.Output()
-out2 = widgets.Output()
-data1 = pd.DataFrame(np.random.normal(size = 50))
-data2 = pd.DataFrame(np.random.normal(size = 100))
-
-tab = widgets.Tab(children = [out1, out2])
-tab.set_title(0, 'First')
-tab.set_title(1, 'Second')
-display(tab)
-
-with out1:
-    fig1, axes1 = plt.subplots()
-    data1.hist(ax = axes1)
-    plt.show(fig1)
-
-with out2:
-    fig2, axes2 = plt.subplots()
-    data2.hist(ax = axes2)
-    plt.show(fig2)
-```
-
-```{code-cell} ipython3
-import ipywidgets as widgets
-%matplotlib inline
-out = widgets.Output()
-with out:
-    plt.plot([1, 2], [1, 2])
-display(out)
-```
-
-```{code-cell} ipython3
-display(out)
-```
-
-# Modélisation de la jonglerie
-
-+++
-
-## Jonglage simple
-Hypothèse :
+## Merci de votre attention :)

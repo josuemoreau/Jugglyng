@@ -200,7 +200,7 @@ class BallView:
             MeshStandardMaterial(color=ball.color)
         )
         #self.tone = mixer.Sound(ball.tone)
-        self.tone = Audio(ball.tone)
+        self.tone = Audio(ball.tone) if ball.tone else None
 
 class HandView:
     def __init__(self, id: int, throw_times: List[int],

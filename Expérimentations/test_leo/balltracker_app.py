@@ -468,6 +468,8 @@ class BallTracker():
                 self.draw_lines = not(self.draw_lines) 
             #elif k == ord('s'):
             #    self.switch_id = (self.switch_id + 1) % len(self.switch_list)
+            elif k == ord('r'):
+                self.vp.restart()
             elif k == ord('m') and not self.save_tracking:
                 #Choses à faire à chaque fois qu'on change de mode
                 #...

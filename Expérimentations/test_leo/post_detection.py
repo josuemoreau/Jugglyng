@@ -36,7 +36,7 @@ def threshold_intersections(threshold, x, y, interpolate=True):
 #ON NE GERE PAS ENCORE LES PROBLEME LIES A ABSENCE DE VALEUR !
 #Problèmes acces valeurs en 0 dans init tableaux. A resoudre plus tard
 
-def find_throws(path, ignore_nan = False):
+def find_throws(path, ignore_nan = False, ball_name = None):
     with open(path, 'r') as f:
         data = json.load(f)
     balls = [Ball.from_dict(ball_data) for ball_data in data['balls']]
@@ -45,16 +45,16 @@ def find_throws(path, ignore_nan = False):
     
     #temps en ms
     to_plot = [{"x" : "t",   "y" : "x",  "xlabel" : "temps", "ylabel" : "x",  "threshold" : thresholds[0]},
-               {"x" : "t",   "y" : "y",  "xlabel" : "temps", "ylabel" : "y",  "threshold" : thresholds[1]},
+               {"x" : "t",   "y" : "y",  "xlabel" : "temps", "ylabel" : "y",  "threshold" : thresholds[1]}]
                #{"x" : "tv",  "y" : "vx", "xlabel" : "temps", "ylabel" : "vx"},
-               {"x" : "tv",  "y" : "vy", "xlabel" : "temps", "ylabel" : "vy", "threshold" : 0}]
+               #{"x" : "tv",  "y" : "vy", "xlabel" : "temps", "ylabel" : "vy", "threshold" : 0}
                #{"x" : "ta", "y" : "ax",  "xlabel" : "temps", "ylabel" : "ax"},
                #{"x" : "ta", "y" : "ay",  "xlabel" : "temps", "ylabel" : "ay"}]
     
-    fig, axes = plt.subplots(len(to_plot), 1, figsize=(9, 4*len(to_plot)))
+    fig, axes = plt.subplots(len(to_plot), 1, figsize=(12, 5*len(to_plot)))
     #figsize=(12, 5*len(to_plot))
     for ball in balls:
-        if ball.name != "Vert":
+        if ball_name is not None and ball.name != ball_name:
             continue
         ball_data_list = [(key, *elem) for key, elem in ball.data.items()]
         ball_data_list.sort(key = lambda x : x[0])
@@ -84,7 +84,7 @@ def find_throws(path, ignore_nan = False):
         thr_x, thr_y = thresholds
         
         x_inter, i_x_inter = threshold_intersections(thr_x, t, x)
-        axes[0].scatter(x_inter, [thr_x]*len(x_inter), marker='x', color=ball.plt_color)
+        axes[0].scatter(x_inter, [thr_x]*len(x_inter), marker='x', color=ball.plt_color, label="Pts d'intersection")
         
         vx_inter, i_vx_inter = threshold_intersections(0, tv, vx)
         
@@ -123,7 +123,7 @@ def find_throws(path, ignore_nan = False):
         
         #On s'occupe des lancer en y.
         y_inter, i_y_inter = threshold_intersections(thr_y, t, y)
-        axes[1].scatter(y_inter, [thr_y]*len(y_inter), marker='x', color=ball.plt_color)
+        axes[1].scatter(y_inter, [thr_y]*len(y_inter), marker='x', color=ball.plt_color, label = "Pts d'intersection")
         
         vy_inter, i_vy_inter = threshold_intersections(0, tv, vy)
         
@@ -148,7 +148,7 @@ def find_throws(path, ignore_nan = False):
         for i in range(len(i_y_inter) - 1):
             if y[i_y_inter[i]] < thr_y and y[i_y_inter[i+1]] > thr_y:
                 i_bells.append((i_y_inter[i], i_y_inter[i+1]))
-        print(f"{i_bells = }")
+        #print(f"{i_bells = }")
 
         #On souhaite également prendre en compte les moment où l'on perd/récupère les valeurs comme début/fin de cloche
         nan_streak = False
@@ -163,8 +163,8 @@ def find_throws(path, ignore_nan = False):
                 i_nan.append(i) 
 
         i_bell_limit_poi = sorted(list(set(i_nan + i_vy_inter)))
-        print(f"{i_bell_limit_poi = }")
-        axes[2].scatter([t[i] for i in i_bell_limit_poi], [vy[i] for i in i_bell_limit_poi], marker='x', color=ball.plt_color)
+        #print(f"{i_bell_limit_poi = }")
+        #axes[2].scatter([t[i] for i in i_bell_limit_poi], [vy[i] for i in i_bell_limit_poi], marker='x', color=ball.plt_color)
         
         #Si la première cloche arrive trop tôt, il se peut qu'on ne connaisse pas son début.
         #Dans ce cas, il faut penser à examiner précautionneusement le premier lancer en x,
@@ -190,8 +190,8 @@ def find_throws(path, ignore_nan = False):
         if i_y_inter[-1] not in i_y_inter_in_bell:
             careful_x_end = i_y_inter[-1]
             
-        print(f"{careful_x_start = }")
-        print(f"{careful_x_end = }")
+        #print(f"{careful_x_start = }")
+        #print(f"{careful_x_end = }")
             
         #Cas 2 - Pas de POI
         if i_bells[0][0] < i_bell_limit_poi[0]:
@@ -201,9 +201,9 @@ def find_throws(path, ignore_nan = False):
             careful_x_end = i_bells[-1][0]
             i_bells.pop(-1)
         
-        print(f"{i_x_throws = }")
-        print(f"{careful_x_start = }")
-        print(f"{careful_x_end = }")
+        #print(f"{i_x_throws = }")
+        #print(f"{careful_x_start = }")
+        #print(f"{careful_x_end = }")
         
         #On cherche les poi jusqu'auxquels on doit faire attention :
         if careful_x_start is not None:
@@ -233,8 +233,8 @@ def find_throws(path, ignore_nan = False):
                 i += 1
             del i_x_throws[len(i_x_throws)-i:]
         
-        print(f"{i_bells = }")
-        print(f"{i_x_throws = }")
+        #print(f"{i_bells = }")
+        #print(f"{i_x_throws = }")
         
         #On peut à présent se pencher sur les cloches !
         #Pour chaque cloche, on cherche les temps de lancer et de réception
@@ -260,13 +260,13 @@ def find_throws(path, ignore_nan = False):
         
         #On affiche les débuts/fins de cloches.
         i_y_starts, i_y_ends = untuplize(i_y_throws, python_list=True)
-        print(f"{i_y_starts = }", f"{i_y_ends = }")
+        #print(f"{i_y_starts = }", f"{i_y_ends = }")
         t_starts = [t[i] for i in i_y_starts]
         t_ends = [t[i] for i in i_y_ends]
         y_starts = [y[i] for i in i_y_starts]
         y_ends = [y[i] for i in i_y_ends]
-        axes[1].scatter(t_starts, y_starts, marker='^', color=ball.plt_color)
-        axes[1].scatter(t_ends  , y_ends  , marker='v', color=ball.plt_color)
+        axes[1].scatter(t_starts, y_starts, marker='^', color=ball.plt_color, label="Début cloche")
+        axes[1].scatter(t_ends  , y_ends  , marker='v', color=ball.plt_color, label="Fin cloche")
             
         
         
@@ -309,11 +309,12 @@ def find_throws(path, ignore_nan = False):
                 throws.append((i_x, origin, destination, "=1"))
         
         throws.sort(key = lambda x : x[0])
-        print(f"{throws = }")
+        #print(f"{throws = }")
                 
-            
-        for i, data in enumerate(to_plot):
-            axes[i].plot(var[data['x']], var[data['y']], color=ball.plt_color, label=ball.name)
+        axes[0].plot(t, x, color=ball.plt_color, label='Pos $x$ balle Bleue')
+        axes[1].plot(t, y, color=ball.plt_color, label='Pos $y$ balle Bleue')
+        #for i, data in enumerate(to_plot):
+            #axes[i].plot(var[data['x']], var[data['y']], color=ball.plt_color, label=ball.name)
         #ax[0].plot(t, x, color=ball.plt_color, label=ball.name)
         #plt.figlegend()
         
@@ -322,13 +323,23 @@ def find_throws(path, ignore_nan = False):
             axes[i].set_xlabel(data['xlabel'])
         if 'ylabel' in data:
             axes[i].set_xlabel(data['ylabel'])
-        axes[i].set_xticks(data.get('xticks', np.linspace(t[0], t[-1], 5))) #a corriger
+        #axes[i].set_xticks(data.get('xticks', np.linspace(t[0], t[-1], 5))) #a corriger
         if 'threshold' in data:
-            axes[i].plot(axes[i].get_xlim(), [data['threshold']]*2, linestyle='--')
+            axes[i].plot(axes[i].get_xlim(), [data['threshold']]*2, linestyle='--', label='Seuil')
     #A CONFIGURER ABSOLUMENT sinon la figure met des années à s'afficher
     #ax[0].set_xticks(np.linspace(int(t[0]), t[-1], 5))
+    axes[0].set_xticks([0, 2000, 4000, 6000, 8000, 10000])
+    axes[0].set_xlabel("Temps $t$ (ms)")
+    axes[0].set_ylabel("$x$")
+    axes[1].set_xticks([0, 2000, 4000, 6000, 8000, 10000])
+    axes[1].set_xlabel("Temps $t$ (ms)")
+    axes[1].set_ylabel("$y$")
+    axes[0].legend(loc="lower right")
+    axes[1].legend(loc="lower right")
 
-    #Résoudre décalage de 1 sur triangles !!
+    throws.sort(key = lambda x : x[0])
+    return throws
+    
     
 def show_all_curves(path, ignore_nan = False):
     with open(path, 'r') as f:
@@ -345,7 +356,7 @@ def show_all_curves(path, ignore_nan = False):
                #{"x" : "ta", "y" : "ax",  "xlabel" : "temps", "ylabel" : "ax"},
                #{"x" : "ta", "y" : "ay",  "xlabel" : "temps", "ylabel" : "ay"}]
     
-    fig, axes = plt.subplots(len(to_plot), 1, figsize=(9, 4*len(to_plot)))
+    fig, axes = plt.subplots(len(to_plot), 1, figsize=(12, 5*len(to_plot)))
     #figsize=(12, 5*len(to_plot))
     for ball in balls:
         ball_data_list = [(key, *elem) for key, elem in ball.data.items()]
