@@ -119,7 +119,7 @@ Périodicité pas toujours possible...
 <!-- #endregion -->
 
 <!-- #region slideshow={"slide_type": "subslide"} -->
-### Automate de jonglerie simple
+### Graphe de jonglerie simple
 
 <center>
     <img src="slidefigs/figure-automate.png" width="700"/>
@@ -161,9 +161,6 @@ $
 - Plus de répétition des séquences.
 - On ne jongle plus depuis / pour toujours.
 - Distinction des balles dans la main.
-  <center>
-    <img width="800" src="Notations Vincent 2.png" />
-  </center>
 
 $$\Large
 \begin{pmatrix}
@@ -334,6 +331,7 @@ $$
 <!-- #region slideshow={"slide_type": "subslide"} -->
 ### Résolution
 
+#### Dancing Links
 #### Programmation linéaire
 $$\large
 \begin{array}{lll}
@@ -348,8 +346,6 @@ $$\large
     & \text{$\forall i \in S, \quad \displaystyle\sum_{c \in C} A_{i, c} \leq 1$}
 \end{array}
 $$
-
-#### Dancing Links
 <!-- #endregion -->
 
 <!-- #region slideshow={"slide_type": "subslide"} -->
