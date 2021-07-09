@@ -1,35 +1,33 @@
-from IPython.display import display, HTML, Javascript
+from IPython.display import display
+import base64
+import jp_proxy_widget
+
 
 class Audio():
-    js_script_begin = """<script type="module">
-		import * as THREE from 'https://unpkg.com/three@0.127.0/build/three.module.js';
-		
-		const camera = new THREE.Camera();
+    def __init__(self, filename):
+        self.widget = jp_proxy_widget.JSProxyWidget()
+        self.js = "howler.js"
 
-		const scene = new THREE.Scene();
+        self.widget.load_js_files([self.js])
 
-		// create an AudioListener and add it to the camera 
-		const listener = new THREE.AudioListener();
-		camera.add(listener); // create a global audio source
+        f = open(filename, 'rb')
+        data = f.read()
+        encoded = base64.b64encode(data)
 
-		const sound = new THREE.Audio(listener); // load a sound and set it as the Audio object's buffer 
+        self.url = 'data:audio/x-wav;base64,' + str(encoded)[2:-1]
 
-		const audioLoader = new THREE.AudioLoader();
-		audioLoader.load('"""
-    
-    js_script_end = """', function(buffer) {
-			sound.setBuffer(buffer);
-			sound.setLoop(false);
-			sound.setVolume(0.5);
-			sound.play();
-		});
-    </script>"""
-    
-    def __init__(self, file):
-        self.file = file
-        self.js_script = self.js_script_begin + file + self.js_script_end
-        self.html = HTML(self.js_script)
-        self.disp = display("", display_id = True)
-        
+        self.widget.js_init("""
+            element.empty();
+
+            element.sound = new Howl({
+                src: [url]
+            });
+            """, url=self.url)
+
+        display(self.widget)
+
     def play(self):
-        self.disp.update(self.html)
+        self.widget.element.sound.play()
+
+    def pause(self):
+        self.widget.element.sound.pause()
