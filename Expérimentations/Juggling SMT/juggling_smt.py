@@ -177,13 +177,13 @@ def solve_with_smt_solver(balls: List[str], throws: List[List[Throw]],
 
     check = solver.check()
     print(check)
-    if check == z3.sat:
-        model = solver.model()
-        print(type(model))
+    # if check == z3.sat:
+    #     model = solver.model()
+    #     print(type(model))
 
-        print(model.evaluate(affect(0, z3.StringVal('mi'), 5)))
-        print(model.evaluate(affect(0, z3.StringVal('do'), 1)))
-        print(model.evaluate(affect(1, z3.StringVal('mi'), 2)))
+    #     print(model.evaluate(affect(0, z3.StringVal('mi'), 5)))
+    #     print(model.evaluate(affect(0, z3.StringVal('do'), 1)))
+    #     print(model.evaluate(affect(1, z3.StringVal('mi'), 2)))
 
         # print(model.evaluate(affect(0, z3.StringVal('mi'), 5, 0, 1)))
         # print(model.evaluate(affect(0, z3.StringVal('mi'), 5, 0, 2)))
