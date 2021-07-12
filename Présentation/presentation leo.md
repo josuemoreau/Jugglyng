@@ -55,74 +55,6 @@ import ipywidgets as widgets
 %matplotlib inline
 ```
 
-+++ {"slideshow": {"slide_type": "slide"}}
-
-## Modélisation de la jonglerie
-
-+++ {"slideshow": {"slide_type": "subslide"}}
-
-### Jonglerie simple
-- Une main.
-- Lancers et rattrapages réguliers.
-- Pas de balle en main.
-- Jongle depuis / pour toujours.
-- Balle rattrapée = Balle relancée.
-- 0 ou 1 balle rattrapée à tout temps.
-
-#### Exemple : Figure 312
-
-<center>
-    <img src="slidefigs/figure-3_1_2.png" width="1000"/>
-</center>
-
-+++ {"slideshow": {"slide_type": "subslide"}}
-
-#### Attention !
-Périodicité pas toujours possible...
-
-<center>
-    <img src="slidefigs/figure-2_3_2.png" width="400"/>
-</center>
-
-<center>
-    <img src="slidefigs/figure-3_0_3_0.png" width="350"/>
-</center>
-
-+++ {"slideshow": {"slide_type": "subslide"}}
-
-### Automate de jonglerie simple
-
-<center>
-    <img src="slidefigs/figure-automate.png" width="700"/>
-</center>
-
-+++ {"slideshow": {"slide_type": "subslide"}}
-
-### Jonglerie multiplex
-- Plusieurs balles rattrapables / lançables à tout temps.
-
-#### Exemple : Figure [13]20
-
-<center>
-    <img src="slidefigs/figure-13_2_0.png" width="700"/>
-</center>
-
-+++ {"slideshow": {"slide_type": "subslide"}}
-
-### Jonglerie multihand
-- Plusieurs mains.
-
-#### Exemple : Figure $\begin{array}{lll}
-        2_0 & 2_1 & 1_2 \\
-        1_0 2_2 & 2_0 & 0 \\
-        [1 3]_1 3_2 & 0 & 1_2
-\end{array}
-$
-
-<center>
-    <img src="slidefigs/figure-multihand.png" width="500"/>
-</center>
-
 +++ {"slideshow": {"slide_type": "subslide"}}
 
 ## Analyse automatique des figures de jonglerie
@@ -145,10 +77,7 @@ tracker.start()
 ```
 
 ```{code-cell} ipython3
-#tracker.load_config(path='Présentation/vincent_court.json')
-#tracker.start_saving()
-#tracker.stop_saving()
-#tracker.save_config(path='Présentation/presentation.json') 
+tracker.load_config(path='Présentation/vincent_court.json')
 ```
 
 +++ {"slideshow": {"slide_type": "subslide"}}
@@ -190,8 +119,14 @@ lancers
 
 +++ {"slideshow": {"slide_type": "subslide"}}
 
-## Quelques mots pour la fin...
+## Pour la suite...
+
+- Utiliser l'analyse des figures pour générer les contraintes.
+- Clarifier l'interface
+- Questionner les modèles.
+- Continuer le dialogue avec des jongleurs.
 
 +++ {"slideshow": {"slide_type": "subslide"}}
 
 ## Merci de votre attention :)
+Josué Moreau et Kulinski Léo
