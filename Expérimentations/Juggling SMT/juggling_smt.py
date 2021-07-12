@@ -80,9 +80,8 @@ def solve_with_smt_solver(balls: List[str], throws: List[List[Throw]],
     # affect = z3.Function('affect', z3.IntSort(), z3.StringSort(), z3.IntSort(),
     #                      z3.IntSort(), z3.IntSort(), z3.BoolSort())
     affect = z3.Function('affect', z3.IntSort(), z3.StringSort(), z3.IntSort(), Pair)
-    t, hmax, m, h = z3.Ints('t hmax m h')
-    hmax1 = z3.Int('hmax1')
-    b = z3.String('b')
+    t, hmax, m, h, t1, hmax1, m1, h1 = z3.Ints('t hmax m h t1 hmax1 m1 h1')
+    b, b1 = z3.Strings('b b1')
     solver.add(z3.ForAll([t, b, hmax, m, h],
                          z3.Implies(z3.And(1 <= m, m <= nb_hands,
                                            0 <= h, h <= hmax,
@@ -94,21 +93,43 @@ def solve_with_smt_solver(balls: List[str], throws: List[List[Throw]],
                                               z3.And(1 <= m, m <= nb_hands,
                                                      0 <= h, h <= hmax,
                                                      affect(t, b, hmax) == mk_pair(m, h))))))
-    weights: List[List[Tuple[Throw, int]]] = [[] for t in range(max_time + 1)]
-    for t_it in range(len(throws)):
-        for throw in throws[t_it]:
-            for h_it in range(1, min(throw.max_height, H) + 1):
-                for t1_it in range(t_it, t_it + throw.max_height - h_it):
-                    weights[t1_it].append((throw, h_it))
-    for m_it in range(1, nb_hands + 1):
-        for t1_it in range(len(weights)):
-            args = [affect(throw.time, z3.StringVal(throw.ball), throw.max_height) == mk_pair(m_it, h_it)
-                    for (throw, h_it) in weights[t1_it]]
-            if len(args) > 0:
-                solver.add(z3.AtMost(*args, max_weight))
-    solver.add(z3.ForAll([t, b, hmax, hmax1, m, h],
-                         z3.Implies(affect(t, b, hmax) == mk_pair(m, 1),
-                                    z3.Not(affect(t + hmax, b, hmax1) == mk_pair(m, h)))))
+    # weights: List[List[Tuple[Throw, int]]] = [[] for t in range(max_time + 1)]
+    # for t_it in range(len(throws)):
+    #     for throw in throws[t_it]:
+    #         for h_it in range(1, min(throw.max_height, H) + 1):
+    #             for t1_it in range(t_it, t_it + throw.max_height - h_it):
+    #                 weights[t1_it].append((throw, h_it))
+    # for m_it in range(1, nb_hands + 1):
+    #     for t1_it in range(len(weights)):
+    #         args = [affect(throw.time, z3.StringVal(throw.ball), throw.max_height) == mk_pair(m_it, h_it)
+    #                 for (throw, h_it) in weights[t1_it]]
+    #         if len(args) > 0:
+    #             solver.add(z3.AtMost(*args, max_weight))
+    # solver.add(z3.ForAll([t, b, hmax, hmax1, m, h],
+    #                      z3.Implies(affect(t, b, hmax) == mk_pair(m, 1),
+    #                                 affect(t + hmax, b, hmax1) != mk_pair(m, h))))
+    hand = z3.Function('hand', z3.IntSort(), z3.IntSort(), z3.IntSort(), z3.BoolSort())
+    fm: Tuple[int, ]
+    for fm in forbidden_multiplex:
+        if len(fm) == 1:
+            solver.add(z3.ForAll([t, b, hmax, m], affect(t, b, hmax) != mk_pair(m, fm[0])))
+        elif len(fm) == 2:
+            if fm[0] == fm[1]:
+                solver.add(z3.ForAll([t, t1, b, b1, hmax, hmax1, m],
+                                     z3.Implies(z3.And(affect(t, b, hmax) == mk_pair(m, fm[0]),
+                                                       affect(t1, b1, hmax1) == mk_pair(m, fm[0]),
+                                                       t + hmax - fm[0] == t1 + hmax1 - fm[0]),
+                                                b == b1)))
+            else:
+                solver.add(z3.ForAll([t, b, hmax, m, h],
+                                     z3.Implies(affect(t, b, hmax) == mk_pair(m, h),
+                                                hand(t + hmax - h, m, h))))
+                solver.add(z3.ForAll([t, m],
+                                     z3.Or(z3.Not(hand(t, m, fm[0])),
+                                           z3.Not(hand(t, m, fm[1])))))
+        else:
+            raise RuntimeError("Erreur: Interdiction de lancers multiplex de plus de 2 lancers non supporté.")
+    print(solver.sexpr())
     # solver.add(z3.ForAll([t, b, hmax, m, h],
     #                      z3.Implies(affect(t, b, hmax, m, h),
     #                                 T(t, b, hmax))))
