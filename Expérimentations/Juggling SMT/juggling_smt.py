@@ -61,9 +61,19 @@ def throws_to_define_fun(throws: List[List[Throw]]):
     return T
 
 
+def throws_max_time(throws: List[List[Throw]]):
+    max_time = 0
+    for t in range(len(throws)):
+        for throw in throws[t]:
+            if t + throw.max_height > max_time:
+                max_time = t + throw.max_height
+    return max_time
+
+
 def solve_with_smt_solver(balls: List[str], throws: List[List[Throw]],
                           nb_hands: int, H: int, max_weight: int,
                           forbidden_multiplex: List[Tuple[int, ]]):
+    max_time = throws_max_time(throws)
     solver = z3.Solver()
     Pair, mk_pair, (first, second) = z3.TupleSort("Pair", [z3.IntSort(), z3.IntSort()])
     T = throws_to_define_fun(throws)
@@ -71,18 +81,34 @@ def solve_with_smt_solver(balls: List[str], throws: List[List[Throw]],
     #                      z3.IntSort(), z3.IntSort(), z3.BoolSort())
     affect = z3.Function('affect', z3.IntSort(), z3.StringSort(), z3.IntSort(), Pair)
     t, hmax, m, h = z3.Ints('t hmax m h')
+    hmax1 = z3.Int('hmax1')
     b = z3.String('b')
     solver.add(z3.ForAll([t, b, hmax, m, h],
-                         z3.Implies(z3.And(0 <= m, m < nb_hands,
+                         z3.Implies(z3.And(1 <= m, m <= nb_hands,
                                            0 <= h, h <= hmax,
                                            affect(t, b, hmax) == mk_pair(m, h)),
                                     T(t, b, hmax))))
     solver.add(z3.ForAll([t, b, hmax],
                          z3.Implies(T(t, b, hmax),
                                     z3.Exists([m, h],
-                                              z3.And(0 <= m, m < nb_hands,
+                                              z3.And(1 <= m, m <= nb_hands,
                                                      0 <= h, h <= hmax,
                                                      affect(t, b, hmax) == mk_pair(m, h))))))
+    weights: List[List[Tuple[Throw, int]]] = [[] for t in range(max_time + 1)]
+    for t_it in range(len(throws)):
+        for throw in throws[t_it]:
+            for h_it in range(1, min(throw.max_height, H) + 1):
+                for t1_it in range(t_it, t_it + throw.max_height - h_it):
+                    weights[t1_it].append((throw, h_it))
+    for m_it in range(1, nb_hands + 1):
+        for t1_it in range(len(weights)):
+            args = [affect(throw.time, z3.StringVal(throw.ball), throw.max_height) == mk_pair(m_it, h_it)
+                    for (throw, h_it) in weights[t1_it]]
+            if len(args) > 0:
+                solver.add(z3.AtMost(*args, max_weight))
+    solver.add(z3.ForAll([t, b, hmax, hmax1, m, h],
+                         z3.Implies(affect(t, b, hmax) == mk_pair(m, 1),
+                                    z3.Not(affect(t + hmax, b, hmax1) == mk_pair(m, h)))))
     # solver.add(z3.ForAll([t, b, hmax, m, h],
     #                      z3.Implies(affect(t, b, hmax, m, h),
     #                                 T(t, b, hmax))))
