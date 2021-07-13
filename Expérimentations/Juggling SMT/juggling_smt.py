@@ -119,6 +119,20 @@ def solve_with_smt_solver(balls: List[str], throws: List[List[Throw]],
                                            1 <= h, h <= hmax1,
                                            affect(t, b, hmax) == mk_pair(m, 1)),
                                     affect(t + hmax, b, hmax1) != mk_pair(m, h))))
+    solver.add(z3.ForAll([t, t1, b, b1, hmax, hmax1, m, h, h1],
+                         z3.Implies(z3.And(0 <= t, t <= max_time,
+                                           0 <= t1, t1 <= max_time,
+                                           z3.Or(*[b == z3.StringVal(ball) for ball in balls]),
+                                           z3.Or(*[b1 == z3.StringVal(ball) for ball in balls]),
+                                           1 <= hmax, hmax <= max_time,
+                                           1 <= hmax1, hmax1 <= max_time,
+                                           1 <= m, m <= nb_hands,
+                                           1 <= h, h <= hmax,
+                                           1 <= h1, h1 <= hmax1,
+                                           affect(t, b, hmax) == mk_pair(m, h),
+                                           affect(t1, b1, hmax1) == mk_pair(m, h1),
+                                           t + hmax == t1 + hmax1),
+                                    z3.And(t == t1, b == b1, hmax == hmax1, h == h1))))
     hand = z3.Function('hand', z3.IntSort(), z3.IntSort(), z3.IntSort(), z3.BoolSort())
     fm: Tuple[int, ]
     for fm in forbidden_multiplex:
@@ -195,3 +209,67 @@ def solve_with_smt_solver(balls: List[str], throws: List[List[Throw]],
         # print(model.evaluate(affect(0, z3.StringVal('mi'), 5, 1, 3)))
         # print(model.evaluate(affect(0, z3.StringVal('mi'), 5, 1, 4)))
         # print(model.evaluate(affect(0, z3.StringVal('mi'), 5, 1, 5)))
+
+
+def music_max_time(music: List[Tuple[int, str]]):
+    m = 0
+    for t, _ in music:
+        if t > m:
+            m = t
+    return m
+
+
+def imp(*args):
+    e = args[-1]
+    for i in range(len(args) - 2, -1, -1):
+        e = z3.Implies(args[i], e)
+    return e
+
+
+def solve_with_smt_solver2(balls: List[str], music: List[Tuple[int, str]],
+                           nb_hands: int, H: int, max_weight: int,
+                           forbidden_multiplex: List[Tuple[int, ]]):
+    max_time = music_max_time(music)
+    solver = z3.Solver()
+    Pair, mk_pair, (first, second) = z3.TupleSort("Pair", [z3.IntSort(), z3.IntSort()])
+    h = {ball: z3.Const('h_' + ball, z3.SeqSort(z3.IntSort())) for ball in balls}
+    p = {ball: z3.Const('h_' + ball, z3.SeqSort(z3.IntSort())) for ball in balls}
+    t, m, i, k = z3.Ints('t m i k')
+    for ball in balls:
+        solver.add(z3.Length(h[ball]) == max_time + 1)
+        solver.add(z3.Length(p[ball]) == max_time + 1)
+        solver.add(z3.ForAll([t], z3.Implies(z3.And(0 <= t, t <= max_time), z3.And(0 <= h[ball][t], h[ball][t] <= nb_hands))))
+    for tm, bm in music:
+        solver.add(z3.And(h[bm][tm] != 0, h[bm][tm - 1] != h[bm][tm]))
+    solver.add(z3.ForAll([t, m],
+                         imp(0 <= t, t <= max_time,
+                             1 <= m, m <= nb_hands,
+                             z3.AtMost(*[z3.And(h[ball][t] == m) for ball in balls], max_weight))))
+    solver.add(z3.ForAll([t, m],
+                         imp(1 <= t, t <= max_time,
+                             1 <= m, m <= nb_hands,
+                             z3.AtMost(*[z3.And(h[ball][t] != 0, h[ball][t - 1] != h[ball][t]) for ball in balls], 1))))
+    solver.add(z3.ForAll([t, m, i],
+                         imp(0 <= t, t <= max_time,
+                             1 <= m, m <= nb_hands,
+                             1 <= i, i <= max_weight,
+                             z3.AtMost(*[z3.And(h[ball][t] == m, p[ball][t] == i) for ball in balls], 1))))
+    for ball in balls:
+        solver.add(z3.ForAll([t, m, i],
+                             imp(0 <= t, t <= max_time,
+                                 1 <= m, m <= nb_hands,
+                                 2 <= i, i <= max_weight,
+                                 h[ball][t] == m,
+                                 p[ball][t] == i,
+                                 z3.Or(z3.And(h[ball][t + 1] == m, p[ball][t + 1] == i),
+                                       z3.And(h[ball][t + 1] == m, p[ball][t + 1] == i - 1)))))
+    # solver.add(z3.ForAll([t, m, k],
+    #                      imp(0 <= t, t <= max_time,
+    #                          1 <= m, m <= nb_hands,
+    #                          2 <= k, k <= max_weight,
+    #                          h[ball][t] == m,
+    #                          p[ball][t] == i,
+    #                          z3.Or(z3.And(h[ball][t + 1] == m, p[ball][t + 1] == i),
+    #                                z3.And(h[ball][t + 1] == m, p[ball][t + 1] == i - 1)))))
+    check = solver.check()
+    print(check)
