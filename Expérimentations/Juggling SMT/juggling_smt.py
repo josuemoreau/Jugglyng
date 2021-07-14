@@ -231,6 +231,7 @@ def solve_with_smt_solver2(balls: List[str], music: List[Tuple[int, str]],
                            forbidden_multiplex: List[Tuple[int, ]]):
     max_time = music_max_time(music)
     solver = z3.Solver()
+    # solver.set(priority='box')
     Pair, mk_pair, (first, second) = z3.TupleSort("Pair", [z3.IntSort(), z3.IntSort()])
     h = {ball: z3.Const('h_' + ball, z3.SeqSort(z3.IntSort())) for ball in balls}
     p = {ball: z3.Const('h_' + ball, z3.SeqSort(z3.IntSort())) for ball in balls}
@@ -262,7 +263,8 @@ def solve_with_smt_solver2(balls: List[str], music: List[Tuple[int, str]],
                                  h[ball][t] == m,
                                  p[ball][t] == i,
                                  z3.Or(z3.And(h[ball][t + 1] == m, p[ball][t + 1] == i),
-                                       z3.And(h[ball][t + 1] == m, p[ball][t + 1] == i - 1)))))
+                                       z3.And(h[ball][t + 1] == m, p[ball][t + 1] == i - 1),
+                                       z3.And(*[imp(h[ball][t] == m, p[ball][t] <= i, h[ball][t + 1] != m) for ball in balls])))))
     # solver.add(z3.ForAll([t, m, k],
     #                      imp(0 <= t, t <= max_time,
     #                          1 <= m, m <= nb_hands,
@@ -271,5 +273,9 @@ def solve_with_smt_solver2(balls: List[str], music: List[Tuple[int, str]],
     #                          p[ball][t] == i,
     #                          z3.Or(z3.And(h[ball][t + 1] == m, p[ball][t + 1] == i),
     #                                z3.And(h[ball][t + 1] == m, p[ball][t + 1] == i - 1)))))
+    # for ball in balls:
+    #     for t in range(0, max_time + 1):
+    #         solver.minimize(p[ball][t])
+    #         solver.minimize(z3.If(p[ball][t] == 0, 1, 0))
     check = solver.check()
     print(check)
