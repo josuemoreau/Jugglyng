@@ -297,13 +297,14 @@ def solve_exact_cover_with_milp(ec_instance: ExactCoverInstance,
 
     # Génération de l'instance de MILP
     x = p.new_variable(binary=True)
+    o = p.new_variable(binary=True)
     for item in ec_instance.prim_items:
         if len(d[item]) > 0:
             rows_vars = [x[i] for i in d[item]]
             if isinstance(item, XItem):
-                if item.flying_time in {3, 4, 5}:  # Maximisation des lancers 3/4/5
+                if item.flying_time in {3, 4}:  # Maximisation des lancers 3/4
                     max_expr += sum(rows_vars)
-                elif item.flying_time in {6, 7}:  # Minimisation des lancers 6/7
+                elif item.flying_time in {5, 6, 7}:  # Minimisation des lancers 5/6/7
                     min_expr += sum(rows_vars)
                     min_high += len(rows_vars)
             elif isinstance(item, DItem):
@@ -447,7 +448,7 @@ def solve_and_print(music, nb_hands, max_height, max_weight, forbidden_multiplex
     print_juggling(sol)
 
 
-def solve_and_simulate(music, nb_hands, max_height, max_weight, forbidden_multiplex, colors, sides, method="DLX", optimize=True):
+def solve_and_simulate(music, nb_hands, max_height, max_weight, forbidden_multiplex, colors, sides, method="DLX", optimize=True, step=10):
     balls, throws = music_to_throws(music)
     ec_instance = throws_to_extended_exact_cover(balls, throws, nb_hands, max_height, max_weight,
                                                  forbidden_multiplex, True)
@@ -466,7 +467,7 @@ def solve_and_simulate(music, nb_hands, max_height, max_weight, forbidden_multip
         value=0,
         min=0,
         max=4000,
-        step=5,
+        step=step,
         interval=30,
         description="Press play",
         disabled=False
