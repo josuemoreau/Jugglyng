@@ -415,7 +415,7 @@ vector<vector<INT>> DLX::all_solutions(bool verbose) {
                 }
             }
         }
-        print_table();
+        // print_table();
         l++;
         goto M2;
     M7: cout << "M7" << endl;
@@ -475,7 +475,9 @@ vector<vector<INT>> DLX::all_solutions(bool verbose) {
         }
 }
 
-vector<INT> DLX::get_solution() {
+vector<INT> DLX::search() { return search(false); }
+
+vector<INT> DLX::search(bool resume) {
     vector<INT> x(this->options.size());
     vector<INT> ft(this->options.size());
     INT l = 0;
@@ -490,6 +492,14 @@ vector<INT> DLX::get_solution() {
         cout << endl;
     };
 
+    if (resume) {
+        x  = this->x;
+        ft = this->ft;
+        l  = this->l;
+        i  = this->i;
+        goto M9;
+    }
+
     M2: // cout << "M2" << endl;
         // ppx(x, l);
         if (RLINK(0) == 0) {
@@ -498,7 +508,15 @@ vector<INT> DLX::get_solution() {
             // this->print_solution(x, l, pp);
             vector<INT> sol = this->solution_rows(x, l);
             // this->print_solution(sol);
+            
+            // Sauvegarde de l'état de la recherche
+            this->x  = x;
+            this->ft = ft;
+            this->l  = l;
+            this->i  = i;
+
             return sol;
+
             // cout << "====================================================" << endl;
             goto M9;
         }
@@ -585,7 +603,7 @@ vector<INT> DLX::get_solution() {
         // cout << "M9 - l=" << l << endl;
         // ppx(x, l);
         if (l == 0) {
-            return {};
+            throw NoSolution();
         } else l--;
         // cout << "M9 - l=" << l << endl;
         // cout << "x_l " << x[l] << endl;

@@ -1,4 +1,4 @@
-from typing import List, Tuple, Any, Dict, Callable, Hashable, Iterator, Union, Set
+from typing import List, Tuple, Any, Dict, Callable, Hashable, Iterator, Union, Set, Optional
 from typing_extensions import Protocol
 import cppyy
 import os
@@ -19,6 +19,7 @@ _COLOR = _DLX_M.COLOR
 _DLX = _DLX_M.DLX
 _EMPTY_COLOR = 0
 _AbstrItem: Any = _DLX_M.AbstrItem
+_NoSolution = _DLX_M.NoSolution
 
 _primary_tpl = _std.make_tuple['DLX_M::AbstrItem*', _INT, _INT]
 _primary_vct = _std.vector[_std.tuple['DLX_M::AbstrItem*', _INT, _INT]]
@@ -147,12 +148,15 @@ class DLXM():
     variables: List[DLXMVariable]
     new_id: NewId
     rows: List[Tuple[List[ConcItem], List[Tuple[ConcItem, int]]]]
+    resume: bool
 
     def __init__(self):
         self.variables = []
         self.new_id = _new_id_generator()
         self.rows = []
         self.rows_cpp = []
+        self.resume = False
+        self.dlx = None
 
     def new_variable(self, lower_bound: int = 0, upper_bound: int = 1,
                      secondary: bool = False) -> DLXMVariable:
@@ -288,7 +292,14 @@ class DLXM():
         sols = dlx.all_solutions(verbose)
         return [set(sol) for sol in sols]
 
-    def get_solution(self) -> Set[int]:
+    def search(self) -> Optional[Set[int]]:
+        if self.resume:
+            try:
+                sol = self.dlx.search(True)
+                return set(sol)
+            except _NoSolution:
+                return None
+
         primary_items: List[Tuple[ConcItem, int, int]] = []
         secondary_items: List[ConcItem] = []
 
@@ -308,8 +319,15 @@ class DLXM():
         dlx = _DLX(primary, secondary, rows)
         for p, s in self.rows_cpp:
             dlx.add_row(p, s)
-        sol = dlx.get_solution()
-        return set(sol)
+
+        try:
+            sol = dlx.search()
+            self.dlx = dlx
+            self.resume = True
+
+            return set(sol)
+        except _NoSolution:
+            return None
 
 
 if __name__ == "__main__":

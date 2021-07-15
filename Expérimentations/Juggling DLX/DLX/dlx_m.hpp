@@ -2,6 +2,7 @@
 #include <unordered_map>
 #include <functional>
 #include <cmath>
+#include <stdexcept>
 
 namespace DLX_M {
 
@@ -68,7 +69,14 @@ struct Node {
 #define BOUND(x) this->items[x].bound
 
 #define monus(x, y) max(x - y, (INT) 0)
-#define branch_degree(p) monus(LEN(p) + 1, monus(BOUND(p), SLACK(p))) 
+#define branch_degree(p) monus(LEN(p) + 1, monus(BOUND(p), SLACK(p)))
+
+class NoSolution : public std::exception {
+    public:
+        const char *what() const throw() {
+            return "No solution !";
+        }
+};
 
 class DLX {
     public:
@@ -80,7 +88,9 @@ class DLX {
                      vector<tuple<AbstrItem*, COLOR>> row_secondary);
         
         vector<vector<INT>> all_solutions(bool verbose = false);
-        vector<INT> get_solution();
+        vector<INT> search();
+        vector<INT> search(bool resume);
+        // vector<INT> get_solution();
 
         vector<INT> solution_rows(vector<INT> x, INT l);
 
@@ -98,6 +108,11 @@ class DLX {
         INT nb_items = 0;
         INT nb_primary = 0;
         INT nb_rows = 0;
+
+        // Variables de sauvegarde de l'état de la recherche
+        vector<INT> x;
+        vector<INT> ft;
+        INT l, i, p, j, q;
 
         void cover(INT i);
         void hide(INT i);
