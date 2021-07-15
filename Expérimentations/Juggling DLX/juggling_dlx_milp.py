@@ -143,6 +143,7 @@ class UItem(Item):
 class ExactCoverInstance(StructClass):
     max_time: int = 0
     nb_hands: int = 1
+    max_weight: int = 1
     balls: Set[str] = set()
 
     prim_items: List[Item] = []
@@ -268,6 +269,7 @@ def throws_to_extended_exact_cover(balls: Set[str], throws: List[List[Throw]],
                               colors=colors_list,
                               rows=rows,
                               max_time=max_time,
+                              max_weight=max_weight,
                               nb_hands=nb_hands,
                               balls=balls)
 
@@ -275,7 +277,7 @@ def throws_to_extended_exact_cover(balls: Set[str], throws: List[List[Throw]],
 def solve_exact_cover_with_milp(ec_instance: ExactCoverInstance,
                                 optimize: bool = False) \
         -> ExactCoverSolution:
-    p = MixedIntegerLinearProgram(maximization=True)
+    p = MixedIntegerLinearProgram(maximization=False)
 
     # Calcul, pour chaque colonne, des lignes qui ont un élément dans cette
     # colonne
@@ -291,29 +293,24 @@ def solve_exact_cover_with_milp(ec_instance: ExactCoverInstance,
     # variables D(t, m)
     d_expr = {}
 
-    max_expr = 0
-    min_expr = 0
-    min_high = 0
-
     # Génération de l'instance de MILP
     x = p.new_variable(binary=True)
-    o = p.new_variable(binary=True)
     for item in ec_instance.prim_items:
         if len(d[item]) > 0:
             rows_vars = [x[i] for i in d[item]]
-            if isinstance(item, XItem):
-                if item.flying_time in {3, 4}:  # Maximisation des lancers 3/4
-                    max_expr += sum(rows_vars)
-                elif item.flying_time in {5, 6, 7}:  # Minimisation des lancers 5/6/7
-                    min_expr += sum(rows_vars)
-                    min_high += len(rows_vars)
-            elif isinstance(item, DItem):
-                d_expr[(item.time, item.hand)] = sum(rows_vars)
+            # if isinstance(item, XItem):
+            #     if item.flying_time in {3, 4}:  # Maximisation des lancers 3/4
+            #         max_expr += sum(rows_vars)
+            #     elif item.flying_time in {5, 6, 7}:  # Minimisation des lancers 5/6/7
+            #         min_expr += sum(rows_vars)
+            #         min_high += len(rows_vars)
+            # elif isinstance(item, DItem):
+            #     d_expr[(item.time, item.hand)] = sum(rows_vars)
             p.add_constraint(item.bounds[0]
                              <= sum(rows_vars)
                              <= item.bounds[1])
-        elif isinstance(item, DItem):
-            d_expr[(item.time, item.hand)] = 0
+        # elif isinstance(item, DItem):
+        #     d_expr[(item.time, item.hand)] = 0
 
     if optimize:
         # Minimisation du nombre de lancers en même temps depuis des mains
@@ -327,8 +324,34 @@ def solve_exact_cover_with_milp(ec_instance: ExactCoverInstance,
         #     p.add_constraint(a[t] >= (sum_dvar - 1) / ec_instance.nb_hands)
         # p.set_objective(sum([a[t] for t in range(ec_instance.max_time + 1)]))
 
+        # Génération de la fonction à optimiser
+        
+        max_throws = 0
+        min_throws = 0
+        min_throws_high = 0
+
+        multiplex_throws = 0
+
+        o = p.new_variable(binary=True)
+        for item in ec_instance.prim_items:
+            if len(d[item]) > 0:
+                rows_vars = [x[i] for i in d[item]]
+                if isinstance(item, XItem):
+                    if item.flying_time in {3, 4}:  # Maximisation des lancers 3/4
+                        max_throws += sum(rows_vars)
+                    elif item.flying_time in {1, 2, 5, 6, 7}:  # Minimisation des lancers 5/6/7
+                        min_throws += sum(rows_vars)
+                        min_throws_high += len(rows_vars)
+                elif isinstance(item, WItem):
+                    p.add_constraint(o[(item.time, item.hand)]
+                                     >= (sum(rows_vars) - 1) / ec_instance.max_weight)
+                    multiplex_throws += o[(item.time, item.hand)]
+
+        # Optimisation du score
+        p.set_objective(min_throws_high * multiplex_throws + min_throws)
+
         # Optimisation du score lié au jonglage
-        p.set_objective(max_expr + min_high - min_expr)
+        # p.set_objective(max_expr + min_high - min_expr)
 
     # Résolution
     p.solve()
