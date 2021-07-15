@@ -141,10 +141,12 @@ class UItem(Item):
 
 
 class ExactCoverInstance(StructClass):
-    max_time: int = 0
-    nb_hands: int = 1
-    max_weight: int = 1
-    balls: Set[str] = set()
+    # max_time: int = 0
+    # nb_hands: int = 1
+    # max_weight: int = 1
+    # balls: Set[str] = set()
+
+    params: Dict[str, Any] = {}
 
     prim_items: List[Item] = []
     sec_items: List[Item] = []
@@ -155,9 +157,7 @@ class ExactCoverInstance(StructClass):
 
 
 class ExactCoverSolution(StructClass):
-    max_time: int = 0
-    nb_hands: int = 1
-    balls: Set[str] = set()
+    params: Dict[str, Any] = {}
 
     rows: List[List[Union[Item, Tuple[Item, Tuple[Item, int]]]]] = []
 
@@ -259,19 +259,20 @@ def throws_to_extended_exact_cover(balls: Set[str], throws: List[List[Throw]],
     for clr, i in colors.items():
         colors_list[i] = clr
 
-    return ExactCoverInstance(prim_items=list(x_items.values())
-                              + list(l_items.values())
-                              + list(w_items.values())
-                              + list(m_items.values())
-                              + list(d_items.values())
-                              + list(u_items.values()),
+    return ExactCoverInstance(prim_items=list(x_items.values())  # type: ignore
+                              + list(l_items.values())           # type: ignore
+                              + list(w_items.values())           # type: ignore
+                              + list(m_items.values())           # type: ignore
+                              + list(d_items.values())           # type: ignore
+                              + list(u_items.values()),          # type: ignore
                               sec_items=[],
                               colors=colors_list,
                               rows=rows,
-                              max_time=max_time,
-                              max_weight=max_weight,
-                              nb_hands=nb_hands,
-                              balls=balls)
+                              params={
+                                  'max_time': max_time,
+                                  'max_weight': max_weight,
+                                  'nb_hands': nb_hands,
+                                  'balls': balls})
 
 
 def solve_exact_cover_with_milp(ec_instance: ExactCoverInstance,
@@ -316,16 +317,16 @@ def solve_exact_cover_with_milp(ec_instance: ExactCoverInstance,
         # Minimisation du nombre de lancers en même temps depuis des mains
         # différentes
         # a = p.new_variable(binary=True)
-        # for t in range(ec_instance.max_time + 1):
+        # for t in range(ec_instance.params['max_time'] + 1):
         #     sum_dvar = 0
-        #     for h in range(ec_instance.nb_hands):
+        #     for h in range(ec_instance.params['nb_hands']):
         #         dvar = d_expr[(t, h)]
         #         sum_dvar += dvar
-        #     p.add_constraint(a[t] >= (sum_dvar - 1) / ec_instance.nb_hands)
-        # p.set_objective(sum([a[t] for t in range(ec_instance.max_time + 1)]))
+        #     p.add_constraint(a[t] >= (sum_dvar - 1) / ec_instance.params['nb_hands'])
+        # p.set_objective(sum([a[t] for t in range(ec_instance.params['max_time'] + 1)]))
 
         # Génération de la fonction à optimiser
-        
+
         max_throws = 0
         min_throws = 0
         min_throws_high = 0
@@ -344,7 +345,7 @@ def solve_exact_cover_with_milp(ec_instance: ExactCoverInstance,
                         min_throws_high += len(rows_vars)
                 elif isinstance(item, WItem):
                     p.add_constraint(o[(item.time, item.hand)]
-                                     >= (sum(rows_vars) - 1) / ec_instance.max_weight)
+                                     >= (sum(rows_vars) - 1) / ec_instance.params['max_weight'])
                     multiplex_throws += o[(item.time, item.hand)]
 
         # Optimisation du score
@@ -357,11 +358,12 @@ def solve_exact_cover_with_milp(ec_instance: ExactCoverInstance,
     p.solve()
     selected_rows = p.get_values(x)
 
-    return ExactCoverSolution(max_time=ec_instance.max_time,
-                              nb_hands=ec_instance.nb_hands,
-                              balls=ec_instance.balls,
-                              rows=[ec_instance.rows[i]
-                                    for i in selected_rows if selected_rows[i] == 1.0])
+    return ExactCoverSolution(rows=[ec_instance.rows[i]
+                                    for i in selected_rows if selected_rows[i] == 1.0],
+                              params={
+                                  'max_time': ec_instance.params['max_time'],
+                                  'nb_hands': ec_instance.params['nb_hands'],
+                                  'balls': ec_instance.params['balls']})
 
 
 def dlx_solver_instance(ec_instance: ExactCoverInstance) -> DLXM:
@@ -398,9 +400,7 @@ def all_solutions_with_dlx(ec_instance: ExactCoverInstance) -> List[ExactCoverSo
         rows = []
         for i in selected_rows:
             rows.append(dlx.row_obj(i))
-        sols.append(ExactCoverSolution(max_time=ec_instance.max_time,
-                                       nb_hands=ec_instance.nb_hands,
-                                       balls=ec_instance.balls,
+        sols.append(ExactCoverSolution(params=ec_instance.params,
                                        rows=rows))
     return sols
 
@@ -412,16 +412,15 @@ def get_solution_with_dlx(ec_instance: ExactCoverInstance) -> List[ExactCoverSol
     rows = []
     for i in sol:
         rows.append(dlx.row_obj(i))
-    return ExactCoverSolution(max_time=ec_instance.max_time,
-                              nb_hands=ec_instance.nb_hands,
-                              balls=ec_instance.balls,
+    return ExactCoverSolution(params=ec_instance.params,
                               rows=rows)
 
 
 def juggling_sol_to_simulator(sol, colors):
-    hand: List[Dict[str, int]] = [{} for t in range(sol.max_time + 1)]
+    hand: List[Dict[str, int]] = [{} for t in range(sol.params['max_time'] + 1)]
     throws: List[List[List[Tuple(str, int, int)]]] = \
-        [[[] for t in range(sol.max_time + 1)] for h in range(sol.nb_hands)]
+        [[[] for t in range(sol.params['max_time'] + 1)]
+         for h in range(sol.params['nb_hands'])]
 
     for row in sol.rows:
         for item in row:
@@ -438,7 +437,7 @@ def juggling_sol_to_simulator(sol, colors):
                 if ball in hand[land_time]:
                     dst_hand = hand[land_time][ball]
                 else:
-                    for h in range(sol.nb_hands):
+                    for h in range(sol.params['nb_hands']):
                         if h != src_hand:
                             dst_hand = h
                             break
@@ -449,7 +448,7 @@ def juggling_sol_to_simulator(sol, colors):
 
     balls = []
     j = 0
-    for ball in sol.balls:
+    for ball in sol.params['balls']:
         balls.append({"color": colors[j], "tone": ball, "name": ball})
         j += 1
 
@@ -521,10 +520,11 @@ def print_juggling_solution(sol):
 
 
 def print_juggling(sol):
-    in_hand: List[List[Set[str]]] = [[set() for h in range(sol.nb_hands)]
-                                     for t in range(sol.max_time + 1)]
-    hand: List[Dict[str, int]] = [{} for t in range(sol.max_time + 1)]
-    throws: List[List[Tuple[str, int]]] = [[] for t in range(sol.max_time + 1)]
+    max_time = sol.params['max_time']
+    in_hand: List[List[Set[str]]] = [[set() for h in range(sol.params['nb_hands'])]
+                                     for t in range(max_time + 1)]
+    hand: List[Dict[str, int]] = [{} for t in range(max_time + 1)]
+    throws: List[List[Tuple[str, int]]] = [[] for t in range(max_time + 1)]
 
     for row in sol.rows:
         for item in row:
@@ -537,17 +537,17 @@ def print_juggling(sol):
             if isinstance(item, XItem):
                 throws[item.throw.time + item.throw.max_height - item.flying_time] \
                     .append((item.throw.ball, item.flying_time))
-    max_hand_width = [0 for i in range(sol.nb_hands)]
-    for t in range(sol.max_time):
-        for i in range(sol.nb_hands):
+    max_hand_width = [0 for i in range(sol.params['nb_hands'])]
+    for t in range(max_time):
+        for i in range(sol.params['nb_hands']):
             h = in_hand[t][i]
             s = (str(h) if len(h) > 0 else "{}") + " "
             if len(s) > max_hand_width[i]:
                 max_hand_width[i] = len(s)
     max_hands_width = sum(max_hand_width)
-    for t in range(sol.max_time):
+    for t in range(max_time):
         s = ""
-        for i in range(sol.nb_hands):
+        for i in range(sol.params['nb_hands']):
             h = in_hand[t][i]
             s1 = (str(h) if len(h) > 0 else "{}") + " "
             s += ("{:^" + str(max_hand_width[i]) + "}").format(s1)
