@@ -475,8 +475,6 @@ vector<vector<INT>> DLX::all_solutions(bool verbose) {
         }
 }
 
-vector<INT> DLX::search() { return search(false); }
-
 vector<INT> DLX::search(bool resume) {
     vector<INT> x(this->options.size());
     vector<INT> ft(this->options.size());

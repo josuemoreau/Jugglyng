@@ -88,7 +88,6 @@ class DLX {
                      vector<tuple<AbstrItem*, COLOR>> row_secondary);
         
         vector<vector<INT>> all_solutions(bool verbose = false);
-        vector<INT> search();
         vector<INT> search(bool resume);
         // vector<INT> get_solution();
 

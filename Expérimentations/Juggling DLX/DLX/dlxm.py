@@ -321,7 +321,7 @@ class DLXM():
             dlx.add_row(p, s)
 
         try:
-            sol = dlx.search()
+            sol = dlx.search(False)
             self.dlx = dlx
             self.resume = True
 

@@ -180,7 +180,7 @@ void test8() {
 
     dlx.print_table();
 
-    dlx.print_solution(dlx.search());
+    dlx.print_solution(dlx.search(false));
     dlx.print_solution(dlx.search(true));
     dlx.print_solution(dlx.search(true));
     dlx.print_solution(dlx.search(true));
