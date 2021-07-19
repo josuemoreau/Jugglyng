@@ -1,0 +1,1 @@
+print(len({1: True, 2:3}))
