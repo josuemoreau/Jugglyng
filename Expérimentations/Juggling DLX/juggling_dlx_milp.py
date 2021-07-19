@@ -2,6 +2,7 @@ from recordclass import StructClass
 from typing import List, Dict, Tuple, Union, Set, Any
 from sage.all import MixedIntegerLinearProgram
 from DLX.dlxm import DLXM
+from queue import Queue
 
 from pylatex import Document
 from pylatex.utils import NoEscape
@@ -160,6 +161,10 @@ class ExactCoverSolution(StructClass):
     params: Dict[str, Any] = {}
 
     rows: List[List[Union[Item, Tuple[Item, Tuple[Item, int]]]]] = []
+
+
+class ImpossibleHandPosition(Exception):
+    pass
 
 
 def throws_to_extended_exact_cover(balls: Set[str], throws: List[List[Throw]],
@@ -360,10 +365,7 @@ def solve_exact_cover_with_milp(ec_instance: ExactCoverInstance,
 
     return ExactCoverSolution(rows=[ec_instance.rows[i]
                                     for i in selected_rows if selected_rows[i] == 1.0],
-                              params={
-                                  'max_time': ec_instance.params['max_time'],
-                                  'nb_hands': ec_instance.params['nb_hands'],
-                                  'balls': ec_instance.params['balls']})
+                              params=ec_instance.params)
 
 
 def dlx_solver_instance(ec_instance: ExactCoverInstance) -> DLXM:
@@ -403,6 +405,46 @@ def all_solutions_with_dlx(ec_instance: ExactCoverInstance) -> List[ExactCoverSo
         sols.append(ExactCoverSolution(params=ec_instance.params,
                                        rows=rows))
     return sols
+
+
+def check_hand_position(sol: ExactCoverSolution):
+    max_time = sol.params['max_time']
+    nb_hands = sol.params['nb_hands']
+    balls = sol.params['balls']
+    in_hand: List[List[Set[str]]] = [[set() for _ in range(sol.params['nb_hands'])]
+                                     for _ in range(max_time + 1)]
+    hand: List[Dict[str, int]] = [{} for _ in range(max_time + 1)]
+
+    for row in sol.rows:
+        for item in row:
+            if isinstance(item, XItem):
+                for t in range(item.throw.max_height - item.flying_time + 1):
+                    in_hand[item.throw.time + t][item.hand].add(item.throw.ball)
+                    hand[item.throw.time + t][item.throw.ball] = item.hand
+    for row in sol.rows:
+        for item in row:
+            if isinstance(item, XItem):
+                if item.throw.ball not in hand[item.throw.time + item.throw.max_height]:
+                    for h in range(nb_hands):
+                        if h != hand[item.throw.time][item.throw.ball]:
+                            for t1 in range(item.throw.time + item.throw.max_height, max_time + 1):
+                                if len(in_hand[t1][h]) + 1 > sol.params['max_weight']:
+                                    if h == nb_hands - 1:
+                                        raise ImpossibleHandPosition()
+                                    break
+                            else:
+                                for t1 in range(item.throw.time + item.throw.max_height, max_time + 1):
+                                    in_hand[t1][h].add(item.throw.ball)
+                                    hand[t1][item.throw.ball] = h
+
+    for h in range(nb_hands):
+        q: Queue = Queue()
+        while q.empty():
+            (t, x) = q.get()
+            if t > 0:
+                for b in in_hand[t - 1][h]:
+                    # à coder
+                    pass
 
 
 def get_solution_with_dlx(ec_instance: ExactCoverInstance) -> List[ExactCoverSolution]:
