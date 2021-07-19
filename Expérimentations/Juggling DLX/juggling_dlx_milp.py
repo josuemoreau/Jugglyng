@@ -410,29 +410,41 @@ def all_solutions_with_dlx(ec_instance: ExactCoverInstance) -> List[ExactCoverSo
 def check_hand_position(sol: ExactCoverSolution):
     max_time = sol.params['max_time']
     nb_hands = sol.params['nb_hands']
+    max_weight = sol.params['max_weight']
     balls = sol.params['balls']
-    in_hand: List[List[Set[str]]] = [[set() for _ in range(sol.params['nb_hands'])]
+    in_hand: List[List[Set[str]]] = [[set() for _ in range(nb_hands)]
                                      for _ in range(max_time + 1)]
     hand: List[Dict[str, int]] = [{} for _ in range(max_time + 1)]
+    throws: List[List[Set[str]]] = [[set() for _ in range(nb_hands)]
+                                    for _ in range(max_time + 1)]
+    locked: List[List[bool]] = [[False for _ in range(nb_hands)]
+                                for _ in range(max_time + 1)]
 
     for row in sol.rows:
         for item in row:
             if isinstance(item, XItem):
-                for t in range(item.throw.max_height - item.flying_time + 1):
-                    in_hand[item.throw.time + t][item.hand].add(item.throw.ball)
-                    hand[item.throw.time + t][item.throw.ball] = item.hand
+                for d in range(item.throw.max_height - item.flying_time + 1):
+                    in_hand[item.throw.time + d][item.hand].add(item.throw.ball)
+                    hand[item.throw.time + d][item.throw.ball] = item.hand
+                throws[item.throw.time + item.throw.max_height][item.hand].add(item.throw.ball)
+                if item.throw.time > 0 or item.flying_time == item.throw.max_height:
+                    locked[item.throw.time][item.hand] = True
+                    locked[item.throw.time + item.throw.max_height - item.flying_time][item.hand] = True
     for row in sol.rows:
         for item in row:
             if isinstance(item, XItem):
+                # La balle n'est pas relancée i.e. c'est le dernier lancer et
+                # il faut décider vers quelle main lancer la balle
                 if item.throw.ball not in hand[item.throw.time + item.throw.max_height]:
                     for h in range(nb_hands):
-                        if h != hand[item.throw.time][item.throw.ball]:
+                        if item.flying_time > 1 or h != hand[item.throw.time][item.throw.ball]:
                             for t1 in range(item.throw.time + item.throw.max_height, max_time + 1):
-                                if len(in_hand[t1][h]) + 1 > sol.params['max_weight']:
-                                    if h == nb_hands - 1:
+                                if len(in_hand[t1][h]) + 1 > max_weight:  # la main contient déjà trop de balles
+                                    if h == nb_hands - 1:  # aucune main ne peut réceptionner la balle -> erreur
                                         raise ImpossibleHandPosition()
-                                    break
-                            else:
+                                    break  # on cherche une autre main
+                            else:  # on a trouvé une main pour réceptionner la balle
+                                locked[item.throw.time + item.throw.max_height][h] = True
                                 for t1 in range(item.throw.time + item.throw.max_height, max_time + 1):
                                     in_hand[t1][h].add(item.throw.ball)
                                     hand[t1][item.throw.ball] = h
@@ -441,10 +453,11 @@ def check_hand_position(sol: ExactCoverSolution):
         q: Queue = Queue()
         while q.empty():
             (t, x) = q.get()
-            if t > 0:
-                for b in in_hand[t - 1][h]:
-                    # à coder
-                    pass
+            if locked[t][h]:  # un lancer ou une réception s'effectue ici
+                pass
+            else:
+                pass
+
 
 
 def get_solution_with_dlx(ec_instance: ExactCoverInstance) -> List[ExactCoverSolution]:
