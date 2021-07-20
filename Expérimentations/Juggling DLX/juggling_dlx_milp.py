@@ -578,35 +578,17 @@ def get_solution_with_dlx(ec_instance: ExactCoverInstance) -> ExactCoverSolution
     return ec_sol
 
 
-def juggling_sol_to_simulator(sol, colors):
-    hand: List[Dict[str, int]] = [{} for t in range(sol.params['max_time'] + 1)]
-    throws: List[List[List[Tuple(str, int, int)]]] = \
+def juggling_sol_to_simulator(sol: JugglingSolution, colors):
+    # hand: List[Dict[str, int]] = [{} for t in range(sol.params['max_time'] + 1)]
+    throws: List[List[List[Tuple[str, int, int]]]] = \
         [[[] for t in range(sol.params['max_time'] + 1)]
          for h in range(sol.params['nb_hands'])]
 
-    for row in sol.rows:
-        for item in row:
-            if isinstance(item, XItem):
-                for t in range(item.throw.max_height - item.flying_time + 1):
-                    hand[item.throw.time + t][item.throw.ball] = item.hand
-    for row in sol.rows:
-        for item in row:
-            if isinstance(item, XItem):
-                ball = item.throw.ball
-                land_time = item.throw.time + item.throw.max_height
-                throw_time = land_time - item.flying_time
-                src_hand = item.hand
-                if ball in hand[land_time]:
-                    dst_hand = hand[land_time][ball]
-                else:
-                    for h in range(sol.params['nb_hands']):
-                        if h != src_hand:
-                            dst_hand = h
-                            break
-                throws[src_hand][throw_time] \
-                    .append((ball,
-                             dst_hand,
-                             item.flying_time))
+    for throw in sol.throws:
+        throws[throw.src_hand][throw.time + throw.time_in_hand] \
+            .append((throw.ball,
+                     throw.dst_hand,
+                     throw.flying_time))
 
     balls = []
     j = 0
@@ -628,8 +610,10 @@ def solve_and_print(music, nb_hands, max_height, max_weight, forbidden_multiplex
         sol = solve_exact_cover_with_milp(ec_instance, optimize)
     if len(sol) == 0:
         raise RuntimeError("No solution.")
+    jsol = exact_cover_solution_to_juggling_solution(sol)
 
-    print_juggling(sol)
+    print_juggling(jsol)
+    return jsol
 
 
 def solve_and_simulate(music, nb_hands, max_height, max_weight, forbidden_multiplex, colors, sides, method="DLX", optimize=True, step=10):
@@ -643,7 +627,8 @@ def solve_and_simulate(music, nb_hands, max_height, max_weight, forbidden_multip
         sol = solve_exact_cover_with_milp(ec_instance, optimize)
     if len(sol) == 0:
         raise RuntimeError("No solution.")
-    balls, pattern = juggling_sol_to_simulator(sol, colors)
+    jsol = exact_cover_solution_to_juggling_solution(sol)
+    balls, pattern = juggling_sol_to_simulator(jsol, colors)
 
     model = modele.Model(balls, pattern)
     # slider = ipywidgets.FloatSlider(min=0, max=40, step=0.05)
@@ -687,14 +672,29 @@ def print_juggling(sol: JugglingSolution):
                                      for _ in range(max_time + 1)]
     hand: List[Dict[str, int]] = [{} for _ in range(max_time + 1)]
     throws: List[List[Tuple[str, int]]] = [[] for _ in range(max_time + 1)]
+    last_throws: List[FinalThrow] = []
 
     for throw in sol.throws:
         for t in range(throw.time_in_hand + 1):
             in_hand[throw.time + t][throw.src_hand].add(throw.ball)
             hand[throw.time + t][throw.ball] = throw.src_hand
-        hand[throw.time + throw.full_time] = throw.dst_hand
+        for throw1 in last_throws:
+            if throw.ball == throw1.ball and throw.time > throw1.time:
+                last_throws.remove(throw1)
+                last_throws.append(throw)
+                break
+        else:
+            for throw1 in last_throws:
+                if throw.ball == throw1.ball:
+                    break
+            else:
+                last_throws.append(throw)
         throws[throw.time + throw.time_in_hand] \
             .append((throw.ball, throw.flying_time))
+    for throw in last_throws:
+        for t in range(throw.time + throw.full_time, max_time + 1):
+            hand[t][throw.ball] = throw.dst_hand
+            in_hand[t][throw.dst_hand].add(throw.ball)
     max_hand_width = [0 for i in range(sol.params['nb_hands'])]
     for t in range(max_time):
         for i in range(sol.params['nb_hands']):
