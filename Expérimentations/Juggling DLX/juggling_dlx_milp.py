@@ -1,5 +1,5 @@
 from recordclass import StructClass
-from typing import List, Dict, Tuple, Union, Set, Any
+from typing import List, Dict, Tuple, Union, Set, Any, Optional
 from sage.all import MixedIntegerLinearProgram
 from DLX.dlxm import DLXM
 from queue import Queue
@@ -167,6 +167,21 @@ class ImpossibleHandPosition(Exception):
     pass
 
 
+class FinalThrow(StructClass):
+    ball: str
+    time: int
+    time_in_hand: int
+    flying_time: int
+    src_hand: int
+    dst_hand: int
+    full_time: int
+
+
+class JugglingSolution(StructClass):
+    params: Dict[str, Any] = {}
+    throws: List[FinalThrow]
+
+
 def throws_to_extended_exact_cover(balls: Set[str], throws: List[List[Throw]],
                                    nb_hands: int, H: int, max_weight: int,
                                    forbidden_multiplex: List[Tuple[int, ]],
@@ -205,7 +220,7 @@ def throws_to_extended_exact_cover(balls: Set[str], throws: List[List[Throw]],
             l_items[throw] = v
 
             for hand in range(nb_hands):
-                for flying_time in range(1, min(H, throw.max_height) + 1):
+                for flying_time in range(min(H, throw.max_height) + 1):
                     x = XItem(throw=throw, hand=hand, flying_time=flying_time)
                     x_items[(throw, hand, flying_time)] = x
     # Génération des items w, M, D et U
@@ -411,12 +426,13 @@ def check_hand_position(sol: ExactCoverSolution):
     max_time = sol.params['max_time']
     nb_hands = sol.params['nb_hands']
     max_weight = sol.params['max_weight']
-    balls = sol.params['balls']
     in_hand: List[List[Set[str]]] = [[set() for _ in range(nb_hands)]
                                      for _ in range(max_time + 1)]
     hand: List[Dict[str, int]] = [{} for _ in range(max_time + 1)]
     throws: List[List[Set[str]]] = [[set() for _ in range(nb_hands)]
                                     for _ in range(max_time + 1)]
+    catch: List[List[Optional[str]]] = [[None for _ in range(nb_hands)]
+                                        for _ in range(max_time + 1)]
     locked: List[List[bool]] = [[False for _ in range(nb_hands)]
                                 for _ in range(max_time + 1)]
 
@@ -426,7 +442,8 @@ def check_hand_position(sol: ExactCoverSolution):
                 for d in range(item.throw.max_height - item.flying_time + 1):
                     in_hand[item.throw.time + d][item.hand].add(item.throw.ball)
                     hand[item.throw.time + d][item.throw.ball] = item.hand
-                throws[item.throw.time + item.throw.max_height][item.hand].add(item.throw.ball)
+                throws[item.throw.time + item.throw.max_height - item.flying_time][item.hand].add(item.throw.ball)
+                catch[item.throw.time][item.hand] = item.throw.ball
                 if item.throw.time > 0 or item.flying_time == item.throw.max_height:
                     locked[item.throw.time][item.hand] = True
                     locked[item.throw.time + item.throw.max_height - item.flying_time][item.hand] = True
@@ -451,24 +468,68 @@ def check_hand_position(sol: ExactCoverSolution):
 
     for h in range(nb_hands):
         q: Queue = Queue()
-        while q.empty():
-            (t, x) = q.get()
+        # Configuration initiale de la main
+        n = len(in_hand[0][h])
+        balls_in_hand = list(in_hand[0][h])
+        for d in range(n):
+            pos = {}
+            for i in range(n):
+                pos[balls_in_hand[i]] = (i + d) % n
+            q.put((0, pos))
+        # Recherche de solution
+        while not q.empty():
+            (t, pos) = q.get()
             if locked[t][h]:  # un lancer ou une réception s'effectue ici
-                pass
-            else:
-                pass
+                nb_throws = len(throws[t][h])
+                l = [False for _ in range(nb_throws)]
+                for b in throws[t][h]:
+                    if pos[b] >= nb_throws:
+                        break
+                    l[pos[b]] = True
+                if False not in l:
+                    if t + 1 > max_time:
+                        return True
+                    pos1 = {}  # nouvelle position pour la main à l'instant t + 1
+                    # Décalage des balles non lancées
+                    for b in pos:
+                        if b not in throws[t][h]:
+                            pos1[b] = pos[b] - nb_throws
+                    # Réception ou non d'une balle
+                    if catch[t + 1][h] is not None:
+                        pos1[catch[t + 1][h]] = len(pos1)
+                    q.put((t + 1, pos1))
+            else:  # aucun lancer ou réception
+                pos1 = {}
+                n = len(pos)
+                for b in pos:
+                    pos1[b] = (pos[b] - 1) % n
+                # Réception ou non d'une balle au temps suivant
+                if catch[t + 1][h] is not None:
+                    pos[catch[t + 1][h]] = len(pos)
+                    pos1[catch[t + 1][h]] = len(pos1)
+                q.put((t + 1, pos))   # aucun échange de balles dans la main
+                q.put((t + 1, pos1))  # échange de balles dans la main
+        return False
 
 
-
-def get_solution_with_dlx(ec_instance: ExactCoverInstance) -> List[ExactCoverSolution]:
+def get_solution_with_dlx(ec_instance: ExactCoverInstance) -> ExactCoverSolution:
     dlx = dlx_solver_instance(ec_instance)
 
-    sol = dlx.get_solution()
+    sol = dlx.search()
     rows = []
     for i in sol:
         rows.append(dlx.row_obj(i))
-    return ExactCoverSolution(params=ec_instance.params,
-                              rows=rows)
+    ec_sol = ExactCoverSolution(params=ec_instance.params,
+                                rows=rows)
+
+    while not check_hand_position(ec_sol):
+        sol = dlx.search()
+        rows = []
+        for i in sol:
+            rows.append(dlx.row_obj(i))
+        ec_sol = ExactCoverSolution(params=ec_instance.params,
+                                    rows=rows)
+    return ec_sol
 
 
 def juggling_sol_to_simulator(sol, colors):
@@ -576,10 +637,10 @@ def print_juggling_solution(sol):
 
 def print_juggling(sol):
     max_time = sol.params['max_time']
-    in_hand: List[List[Set[str]]] = [[set() for h in range(sol.params['nb_hands'])]
-                                     for t in range(max_time + 1)]
-    hand: List[Dict[str, int]] = [{} for t in range(max_time + 1)]
-    throws: List[List[Tuple[str, int]]] = [[] for t in range(max_time + 1)]
+    in_hand: List[List[Set[str]]] = [[set() for _ in range(sol.params['nb_hands'])]
+                                     for _ in range(max_time + 1)]
+    hand: List[Dict[str, int]] = [{} for _ in range(max_time + 1)]
+    throws: List[List[Tuple[str, int]]] = [[] for _ in range(max_time + 1)]
 
     for row in sol.rows:
         for item in row:
