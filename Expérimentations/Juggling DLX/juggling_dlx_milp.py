@@ -179,7 +179,7 @@ class FinalThrow(StructClass):
 
 class JugglingSolution(StructClass):
     params: Dict[str, Any] = {}
-    throws: List[FinalThrow]
+    throws: List[FinalThrow] = []
 
 
 def throws_to_extended_exact_cover(balls: Set[str], throws: List[List[Throw]],
@@ -381,6 +381,52 @@ def solve_exact_cover_with_milp(ec_instance: ExactCoverInstance,
     return ExactCoverSolution(rows=[ec_instance.rows[i]
                                     for i in selected_rows if selected_rows[i] == 1.0],
                               params=ec_instance.params)
+
+
+def exact_cover_solution_to_juggling_solution(sol: ExactCoverSolution):
+    max_time = sol.params['max_time']
+    nb_hands = sol.params['nb_hands']
+    max_weight = sol.params['max_weight']
+    in_hand: List[List[Set[str]]] = [[set() for _ in range(nb_hands)]
+                                     for _ in range(max_time + 1)]
+    hand: List[Dict[str, int]] = [{} for _ in range(max_time + 1)]
+
+    for row in sol.rows:
+        for item in row:
+            if isinstance(item, XItem):
+                for d in range(item.throw.max_height - item.flying_time + 1):
+                    in_hand[item.throw.time + d][item.hand].add(item.throw.ball)
+                    hand[item.throw.time + d][item.throw.ball] = item.hand
+    for row in sol.rows:
+        for item in row:
+            if isinstance(item, XItem):
+                # La balle n'est pas relancée i.e. c'est le dernier lancer et
+                # il faut décider vers quelle main lancer la balle
+                if item.throw.ball not in hand[item.throw.time + item.throw.max_height]:
+                    for h in range(nb_hands):
+                        if item.flying_time > 1 or h != hand[item.throw.time][item.throw.ball]:
+                            for t1 in range(item.throw.time + item.throw.max_height, max_time + 1):
+                                if len(in_hand[t1][h]) + 1 > max_weight:  # la main contient déjà trop de balles
+                                    if h == nb_hands - 1:  # aucune main ne peut réceptionner la balle -> erreur
+                                        raise ImpossibleHandPosition()
+                                    break  # on cherche une autre main
+                            else:  # on a trouvé une main pour réceptionner la balle
+                                for t1 in range(item.throw.time + item.throw.max_height, max_time + 1):
+                                    in_hand[t1][h].add(item.throw.ball)
+                                    hand[t1][item.throw.ball] = h
+    final_throws = []
+    for row in sol.rows:
+        for item in row:
+            if isinstance(item, XItem):
+                final_throws.append(FinalThrow(ball=item.throw.ball,
+                                               time=item.throw.time,
+                                               time_in_hand=item.throw.max_height - item.flying_time,
+                                               flying_time=item.flying_time,
+                                               src_hand=item.hand,
+                                               dst_hand=hand[item.throw.time + item.throw.max_height][item.throw.ball],
+                                               full_time=item.throw.max_height))
+    return JugglingSolution(params=sol.params,
+                            throws=final_throws)
 
 
 def dlx_solver_instance(ec_instance: ExactCoverInstance) -> DLXM:
@@ -635,24 +681,20 @@ def print_juggling_solution(sol):
                               item.flying_time))
 
 
-def print_juggling(sol):
+def print_juggling(sol: JugglingSolution):
     max_time = sol.params['max_time']
     in_hand: List[List[Set[str]]] = [[set() for _ in range(sol.params['nb_hands'])]
                                      for _ in range(max_time + 1)]
     hand: List[Dict[str, int]] = [{} for _ in range(max_time + 1)]
     throws: List[List[Tuple[str, int]]] = [[] for _ in range(max_time + 1)]
 
-    for row in sol.rows:
-        for item in row:
-            if isinstance(item, XItem):
-                for t in range(item.throw.max_height - item.flying_time + 1):
-                    in_hand[item.throw.time + t][item.hand].add(item.throw.ball)
-                    hand[item.throw.time + t][item.throw.ball] = item.hand
-    for row in sol.rows:
-        for item in row:
-            if isinstance(item, XItem):
-                throws[item.throw.time + item.throw.max_height - item.flying_time] \
-                    .append((item.throw.ball, item.flying_time))
+    for throw in sol.throws:
+        for t in range(throw.time_in_hand + 1):
+            in_hand[throw.time + t][throw.src_hand].add(throw.ball)
+            hand[throw.time + t][throw.ball] = throw.src_hand
+        hand[throw.time + throw.full_time] = throw.dst_hand
+        throws[throw.time + throw.time_in_hand] \
+            .append((throw.ball, throw.flying_time))
     max_hand_width = [0 for i in range(sol.params['nb_hands'])]
     for t in range(max_time):
         for i in range(sol.params['nb_hands']):
