@@ -70,6 +70,7 @@ class NewId(Protocol):
 class ConcItem(_AbstrItem):
     def set(self, repr: Any, x: Any):
         self.x = x
+        self.dlx_id = 0
         self.repr = repr
 
     def get_repr(self):
@@ -83,6 +84,12 @@ class ConcItem(_AbstrItem):
 
     def print(self):
         print(self.repr, end="", flush=True)
+
+    def get_id(self):
+        return self.dlx_id
+
+    def set_id(self, id):
+        self.dlx_id = id
 
 
 class DLXMVariable():

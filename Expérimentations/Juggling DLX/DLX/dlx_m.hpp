@@ -17,6 +17,8 @@ using namespace std;
 class AbstrItem {
 public:
     virtual void print() {}
+    virtual void set_id(INT) {}
+    virtual INT get_id() { return 0; }
 };
 
 struct Item {
@@ -118,6 +120,7 @@ class DLX {
         INT l, i, p, j, q;
 
         function<INT(DLX*)> choose;
+        bool *covered;
 
         void cover(INT i);
         void hide(INT i);

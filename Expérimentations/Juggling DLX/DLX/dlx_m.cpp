@@ -44,6 +44,8 @@ DLX::DLX(vector<tuple<AbstrItem*, INT, INT>> primary,
         tie(name, u, v) = item;
         this->items.push_back(Primary(name, i, i + 2, v - u, v));
         this->corresp.emplace(name, i + 1);
+        cout << "Set dlx_id for item " << i + 1 << endl;
+        name->set_id(i + 1);
         this->options.push_back(HNode(0, i + 1, i + 1, -1));
         this->nb_option_nodes++;
         i++;
@@ -76,6 +78,10 @@ DLX::DLX(vector<tuple<AbstrItem*, INT, INT>> primary,
     }
 
     this->choose = choose;
+    this->covered = (bool *) malloc(sizeof(bool) * (this->nb_primary + 1));
+    this->covered[0] = true;
+    for (int k = 1; k <= this->nb_primary; k++)
+        this->covered[k] = false;
 }
 
 void DLX::add_row(vector<AbstrItem*> row_primary, 
