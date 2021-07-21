@@ -83,6 +83,10 @@ class DLX {
         DLX(vector<tuple<AbstrItem*, INT, INT>> primary,
             vector<AbstrItem*> secondary, 
             vector<tuple<vector<AbstrItem*>, vector<tuple<AbstrItem*, COLOR>>>> rows);
+        DLX(vector<tuple<AbstrItem*, INT, INT>> primary,
+            vector<AbstrItem*> secondary, 
+            vector<tuple<vector<AbstrItem*>, vector<tuple<AbstrItem*, COLOR>>>> rows,
+            function<INT(DLX*)> choose);
 
         void add_row(vector<AbstrItem*> row_primary, 
                      vector<tuple<AbstrItem*, COLOR>> row_secondary);
@@ -113,6 +117,8 @@ class DLX {
         vector<INT> ft;
         INT l, i, p, j, q;
 
+        function<INT(DLX*)> choose;
+
         void cover(INT i);
         void hide(INT i);
         void uncover(INT i);
@@ -125,7 +131,7 @@ class DLX {
         void tweak_special(INT x, INT p);
         void untweak(vector<INT> &ft, INT l);
         void untweak_special(vector<INT> &ft, INT l);
-        INT choose();
+        // INT choose();
 };
 
 }

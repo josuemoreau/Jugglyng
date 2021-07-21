@@ -15,7 +15,22 @@ using namespace DLX_M;
 
 DLX::DLX(vector<tuple<AbstrItem*, INT, INT>> primary,
          vector<AbstrItem*> secondary, 
-         vector<tuple<vector<AbstrItem*>, vector<tuple<AbstrItem*, COLOR>>>> rows) {
+         vector<tuple<vector<AbstrItem*>, vector<tuple<AbstrItem*, COLOR>>>> rows) :
+    DLX(primary, secondary, rows, [](DLX* dlx) -> INT {
+        INT i = dlx->items[0].rlink;
+        INT p;
+
+        for (p = i; p != 0; p = dlx->items[p].rlink)
+            if (dlx->options[p].tl < dlx->options[i].tl)
+                i = p;
+
+        return i;
+    }) {}
+
+DLX::DLX(vector<tuple<AbstrItem*, INT, INT>> primary,
+         vector<AbstrItem*> secondary, 
+         vector<tuple<vector<AbstrItem*>, vector<tuple<AbstrItem*, COLOR>>>> rows,
+         function<INT(DLX*)> choose) {
     INT i = 0;
     AbstrItem* name;
     INT u, v;
@@ -59,6 +74,8 @@ DLX::DLX(vector<tuple<AbstrItem*, INT, INT>> primary,
         tie(row_primary, row_secondary) = row;
         this->add_row(row_primary, row_secondary);
     }
+
+    this->choose = choose;
 }
 
 void DLX::add_row(vector<AbstrItem*> row_primary, 
@@ -249,17 +266,16 @@ void DLX::untweak_special(vector<INT> &ft, INT l) {
     this->uncover(p);
 }
 
-INT DLX::choose() {
-    INT i = this->items[0].rlink;
-    // return i;
-    INT p;
+// INT DLX::choose() {
+//     INT i = this->items[0].rlink;
+//     INT p;
 
-    for (p = i; p != 0; p = this->items[p].rlink)
-        if (this->options[p].tl < this->options[i].tl)
-            i = p;
+//     for (p = i; p != 0; p = this->items[p].rlink)
+//         if (this->options[p].tl < this->options[i].tl)
+//             i = p;
 
-    return i;
-}
+//     return i;
+// }
 
 void DLX::print_table() {
     cout << this->nb_items << " items (" << this->nb_primary << " primary)" << endl;
@@ -370,7 +386,7 @@ vector<vector<INT>> DLX::all_solutions(bool verbose) {
         }
     M3: cout << "M3" << endl;
         ppx(x, l);
-        i = this->choose();
+        i = this->choose(this);
         cout << "Choose " << i << endl;
         cout << "Branch degree " << branch_degree(i) << endl;
         cout << "BOUND(i) " << BOUND(i) << endl;
@@ -520,7 +536,7 @@ vector<INT> DLX::search(bool resume) {
         }
     M3: // cout << "M3" << endl;
         // ppx(x, l);
-        i = this->choose();
+        i = this->choose(this);
         // cout << "Choose " << i << endl;
         // cout << "Branch degree " << branch_degree(i) << endl;
         // cout << "BOUND(i) " << BOUND(i) << endl;
