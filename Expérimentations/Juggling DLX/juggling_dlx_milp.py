@@ -4,6 +4,8 @@ from sage.all import MixedIntegerLinearProgram
 from DLX.dlxm import DLXM
 from queue import Queue
 
+import cppyy
+
 from pylatex import Document
 from pylatex.utils import NoEscape
 
@@ -429,8 +431,8 @@ def exact_cover_solution_to_juggling_solution(sol: ExactCoverSolution):
                             throws=final_throws)
 
 
-def dlx_solver_instance(ec_instance: ExactCoverInstance) -> DLXM:
-    dlx = DLXM()
+def dlx_solver_instance(ec_instance: ExactCoverInstance, choose) -> DLXM:
+    dlx = DLXM(choose)
 
     primary = {}
     secondary = dlx.new_variable(secondary=True)
@@ -454,8 +456,24 @@ def dlx_solver_instance(ec_instance: ExactCoverInstance) -> DLXM:
     return dlx
 
 
-def all_solutions_with_dlx(ec_instance: ExactCoverInstance) -> List[ExactCoverSolution]:
-    dlx = dlx_solver_instance(ec_instance)
+def all_solutions_with_dlx(ec_instance: ExactCoverInstance,
+                           maximize: List[int] = []) \
+        -> List[ExactCoverSolution]:
+
+    cppyy.cppdef("""
+    long int choose(DLX_M::DLX* dlx) {
+        long int i = dlx->item(0).rlink;
+        long int p;
+
+        for (p = i; p != 0; p = dlx->item(p).rlink)
+            if (dlx->option(p).tl < dlx->option(i).tl)
+                i = p;
+
+        return i;
+    }
+    """)
+
+    dlx = dlx_solver_instance(ec_instance, cppyy.gbl.choose)
 
     sols_selected_rows = dlx.all_solutions()
     sols = []
@@ -558,8 +576,24 @@ def check_hand_position(sol: ExactCoverSolution):
         return False
 
 
-def get_solution_with_dlx(ec_instance: ExactCoverInstance) -> ExactCoverSolution:
-    dlx = dlx_solver_instance(ec_instance)
+def get_solution_with_dlx(ec_instance: ExactCoverInstance,
+                          maximize: List[int] = []) \
+        -> ExactCoverSolution:
+
+    cppyy.cppdef("""
+    long int choose(DLX_M::DLX* dlx) {
+        long int i = dlx->item(0).rlink;
+        long int p;
+
+        for (p = i; p != 0; p = dlx->item(p).rlink)
+            if (dlx->option(p).tl < dlx->option(i).tl)
+                i = p;
+
+        return i;
+    }
+    """)
+
+    dlx = dlx_solver_instance(ec_instance, cppyy.gbl.choose)
 
     sol = dlx.search()
     rows = []

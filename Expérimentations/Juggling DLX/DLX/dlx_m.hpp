@@ -103,6 +103,9 @@ class DLX {
         void print_rows(vector<INT> rows);
         void print_solution(vector<INT> sol);
 
+        Item item(INT i) { return this->items[i]; }
+        Node option(INT i) { return this->options[i]; }
+
     private:
         vector<Item> items;
         vector<Node> options;
