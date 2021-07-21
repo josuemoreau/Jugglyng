@@ -150,13 +150,14 @@ class DLXM():
     rows: List[Tuple[List[ConcItem], List[Tuple[ConcItem, int]]]]
     resume: bool
 
-    def __init__(self):
+    def __init__(self, choose=None):
         self.variables = []
         self.new_id = _new_id_generator()
         self.rows = []
         self.rows_cpp = []
         self.resume = False
         self.dlx = None
+        self.choose = choose
 
     def new_variable(self, lower_bound: int = 0, upper_bound: int = 1,
                      secondary: bool = False) -> DLXMVariable:
@@ -286,7 +287,8 @@ class DLXM():
         secondary = _S(secondary_items)
         rows = _R([])
 
-        dlx = _DLX(primary, secondary, rows)
+        dlx = _DLX(primary, secondary, rows, self.choose) \
+            if self.choose is not None else _DLX(primary, secondary, rows)
         for p, s in self.rows_cpp:
             dlx.add_row(p, s)
         sols = dlx.all_solutions(verbose)
@@ -316,7 +318,8 @@ class DLXM():
         secondary = _S(secondary_items)
         rows = _R([])
 
-        dlx = _DLX(primary, secondary, rows)
+        dlx = _DLX(primary, secondary, rows, self.choose) \
+            if self.choose is not None else _DLX(primary, secondary, rows)
         for p, s in self.rows_cpp:
             dlx.add_row(p, s)
 
