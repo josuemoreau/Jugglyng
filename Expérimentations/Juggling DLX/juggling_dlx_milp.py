@@ -13,6 +13,25 @@ import modele
 import ipywidgets
 import pythreejs
 
+_choose_model = """
+long int choose(DLX_M::DLX* dlx) {
+    long int i = dlx->item(0).rlink;
+    long int p;
+
+    for (p = i; p != 0; p = dlx->item(p).rlink)
+        if (dlx->option(p).tl <= 1 && dlx->option(p).tl < dlx->option(i).tl)
+            i = p;
+
+    if (dlx->option(i).tl <= 1) return i;
+
+    for (p = i; p != 0; p = dlx->item(p).rlink)
+        if (dlx->option(p).tl < dlx->option(i).tl)
+            i = p;
+
+    return i;
+}
+"""
+
 
 class Throw(StructClass):
     ball: str
@@ -460,18 +479,7 @@ def all_solutions_with_dlx(ec_instance: ExactCoverInstance,
                            maximize: List[int] = []) \
         -> List[ExactCoverSolution]:
 
-    cppyy.cppdef("""
-    long int choose(DLX_M::DLX* dlx) {
-        long int i = dlx->item(0).rlink;
-        long int p;
-
-        for (p = i; p != 0; p = dlx->item(p).rlink)
-            if (dlx->option(p).tl < dlx->option(i).tl)
-                i = p;
-
-        return i;
-    }
-    """)
+    cppyy.cppdef(_choose_model)
 
     dlx = dlx_solver_instance(ec_instance, cppyy.gbl.choose)
 
@@ -580,18 +588,7 @@ def get_solution_with_dlx(ec_instance: ExactCoverInstance,
                           maximize: List[int] = []) \
         -> ExactCoverSolution:
 
-    cppyy.cppdef("""
-    long int choose(DLX_M::DLX* dlx) {
-        long int i = dlx->item(0).rlink;
-        long int p;
-
-        for (p = i; p != 0; p = dlx->item(p).rlink)
-            if (dlx->option(p).tl < dlx->option(i).tl)
-                i = p;
-
-        return i;
-    }
-    """)
+    cppyy.cppdef(_choose_model)
 
     dlx = dlx_solver_instance(ec_instance, cppyy.gbl.choose)
 
