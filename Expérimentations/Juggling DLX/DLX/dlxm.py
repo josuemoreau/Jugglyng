@@ -235,6 +235,35 @@ class DLXM():
         p, s = self.rows[i]
         return [e.get_obj() for e in p] + [(e.get_obj(), c) for (e, c) in s]
 
+    def compile(self):
+        primary_items: List[Tuple[ConcItem, int, int]] = []
+        secondary_items: List[ConcItem] = []
+
+        x: DLXMVariable
+        for x in self.variables:
+            if x.secondary:
+                for k in x:
+                    secondary_items.append(x[k])
+            else:
+                for k in x:
+                    primary_items.append((x[k], x.lower_bound, x.upper_bound))
+
+        primary = _P(primary_items)
+        secondary = _S(secondary_items)
+        rows = _R([])
+
+        dlx = _DLX(primary, secondary, rows, self.choose) \
+            if self.choose is not None else _DLX(primary, secondary, rows)
+        for p, s in self.rows_cpp:
+            dlx.add_row(p, s)
+
+        self.dlx = dlx
+        self.resume = True
+
+    def set_choose_function(self, choose):
+        self.choose = choose
+        self.dlx.set_choose_function(choose)
+
     def all_solutions(self, verbose: bool = False) -> List[Set[int]]:
         """ Renvoie toutes les solutions à l'instance de exact cover avec
         multiplicité.

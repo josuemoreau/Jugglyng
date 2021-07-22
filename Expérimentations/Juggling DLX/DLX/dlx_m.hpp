@@ -106,6 +106,8 @@ class DLX {
         Item item(INT i) { return this->items[i]; }
         Node option(INT i) { return this->options[i]; }
 
+        void set_choose_function(function<INT(DLX*)> choose) { this->choose = choose; }
+
     private:
         vector<Item> items;
         vector<Node> options;
