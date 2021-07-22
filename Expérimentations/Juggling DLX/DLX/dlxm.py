@@ -156,6 +156,7 @@ class DLXM():
     new_id: NewId
     rows: List[Tuple[List[ConcItem], List[Tuple[ConcItem, int]]]]
     resume: bool
+    compiled_only: bool
 
     def __init__(self, choose=None):
         self.variables = []
@@ -163,6 +164,7 @@ class DLXM():
         self.rows = []
         self.rows_cpp = []
         self.resume = False
+        self.compiled_only = False
         self.dlx = None
         self.choose = choose
 
@@ -270,7 +272,7 @@ class DLXM():
             dlx.add_row(p, s)
 
         self.dlx = dlx
-        self.resume = True
+        self.compiled_only = True
 
     def set_choose_function(self, choose):
         self.choose = choose
@@ -343,7 +345,15 @@ class DLXM():
         return [set(sol) for sol in sols]
 
     def search(self) -> Optional[Set[int]]:
-        if self.resume:
+        if self.compiled_only:
+            self.compiled_only = False
+            try:
+                sol = self.dlx.search(False)
+                self.resume = True
+                return set(sol)
+            except _NoSolution:
+                return None
+        elif self.resume:
             try:
                 sol = self.dlx.search(True)
                 return set(sol)
