@@ -13,8 +13,14 @@ import modele
 import ipywidgets
 import pythreejs
 
+_maximize_model = """
+for (auto i : {{ {} }})
+    if (dlx->is_covered(i))
+        return i;
+"""
+
 _choose_model = """
-long int choose(DLX_M::DLX* dlx) {
+long int choose(DLX_M::DLX* dlx) {{
     long int i = dlx->item(0).rlink;
     long int p;
 
@@ -24,12 +30,14 @@ long int choose(DLX_M::DLX* dlx) {
 
     if (dlx->option(i).tl <= 1) return i;
 
+    {}
+
     for (p = i; p != 0; p = dlx->item(p).rlink)
         if (dlx->option(p).tl < dlx->option(i).tl)
             i = p;
 
     return i;
-}
+}}
 """
 
 
@@ -450,8 +458,8 @@ def exact_cover_solution_to_juggling_solution(sol: ExactCoverSolution):
                             throws=final_throws)
 
 
-def dlx_solver_instance(ec_instance: ExactCoverInstance, choose) -> DLXM:
-    dlx = DLXM(choose)
+def dlx_solver_instance(ec_instance: ExactCoverInstance) -> DLXM:
+    dlx = DLXM()
 
     primary = {}
     secondary = dlx.new_variable(secondary=True)
@@ -472,6 +480,8 @@ def dlx_solver_instance(ec_instance: ExactCoverInstance, choose) -> DLXM:
                 row_secondary.append((secondary[it], clr))
         dlx.add_row(row_primary, row_secondary)
 
+    dlx.compile()
+
     return dlx
 
 
@@ -481,7 +491,8 @@ def all_solutions_with_dlx(ec_instance: ExactCoverInstance,
 
     cppyy.cppdef(_choose_model)
 
-    dlx = dlx_solver_instance(ec_instance, cppyy.gbl.choose)
+    dlx = dlx_solver_instance(ec_instance)
+    dlx.set_choose_function(cppyy.gbl.choose)
 
     sols_selected_rows = dlx.all_solutions()
     sols = []
@@ -588,9 +599,25 @@ def get_solution_with_dlx(ec_instance: ExactCoverInstance,
                           maximize: List[int] = []) \
         -> ExactCoverSolution:
 
-    cppyy.cppdef(_choose_model)
+    dlx = dlx_solver_instance(ec_instance)
 
-    dlx = dlx_solver_instance(ec_instance, cppyy.gbl.choose)
+    maximized_xvars: List[int] = []
+    pvar = dlx.primary_variables(0, 1)
+    if pvar is None:
+        raise Exception("No x variables.")
+    for item in ec_instance.prim_items:
+        if isinstance(item, XItem):
+            if item.flying_time in maximize:
+                maximized_xvars.append(pvar[item].get_id())
+
+    if maximized_xvars == []:
+        print(_choose_model.format(""))
+        cppyy.cppdef(_choose_model.format(""))
+    else:
+        max = _maximize_model.format(", ".join([str(x) for x in maximized_xvars]))
+        cppyy.cppdef(_choose_model.format(max))
+
+    dlx.set_choose_function(cppyy.gbl.choose)
 
     sol = dlx.search()
     rows = []

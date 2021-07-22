@@ -207,6 +207,18 @@ class DLXM():
         self.rows.append((row_primary, row_secondary))
         self.rows_cpp.append((_RP(row_primary), _RS(row_secondary)))
 
+    def primary_variables(self, lower_bound: int, upper_bound: int) -> Optional[DLXMVariable]:
+        for var in self.variables:
+            if var.lower_bound == lower_bound and var.upper_bound == upper_bound:
+                return var
+        return None
+
+    def secondary_variables(self) -> Optional[DLXMVariable]:
+        for var in self.variables:
+            if var.secondary:
+                return var
+        return None
+
     def row_repr(self, i: int) -> List[Union[Any, Tuple[Any, int]]]:
         """ Renvoie la représentation de la ligne `i`.
 

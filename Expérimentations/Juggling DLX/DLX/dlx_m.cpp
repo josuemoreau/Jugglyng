@@ -132,6 +132,7 @@ void DLX::cover(INT i) {
     INT r = RLINK(i);
     RLINK(l) = r;
     LLINK(r) = l;
+    this->covered[i] = true;
 }
 
 void DLX::hide(INT p) {
@@ -162,6 +163,7 @@ void DLX::uncover(INT i) {
         this->unhide(p);
         p = ULINK(p);
     }
+    this->covered[i] = false;
 }
 
 void DLX::unhide(INT p) {
