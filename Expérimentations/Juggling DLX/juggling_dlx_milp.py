@@ -15,7 +15,7 @@ import pythreejs
 
 _maximize_model = """
 for (auto i : {{ {} }})
-    if (dlx->is_covered(i))
+    if (!dlx->is_covered(i))
         return i;
 """
 
@@ -25,10 +25,12 @@ long int choose(DLX_M::DLX* dlx) {{
     long int p;
 
     for (p = i; p != 0; p = dlx->item(p).rlink)
-        if (dlx->option(p).tl <= 1 && dlx->option(p).tl < dlx->option(i).tl)
-            i = p;
+        if (dlx->option(p).tl == 0)
+            return p;
+        // if (dlx->option(p).tl == 0 && dlx->option(p).tl < dlx->option(i).tl)
+        //     i = p;
 
-    if (dlx->option(i).tl <= 1) return i;
+    // if (dlx->option(i).tl == 0) return i;
 
     {}
 
@@ -611,7 +613,6 @@ def get_solution_with_dlx(ec_instance: ExactCoverInstance,
                 maximized_xvars.append(pvar[item].get_id())
 
     if maximized_xvars == []:
-        print(_choose_model.format(""))
         cppyy.cppdef(_choose_model.format(""))
     else:
         max = _maximize_model.format(", ".join([str(x) for x in maximized_xvars]))
@@ -620,6 +621,7 @@ def get_solution_with_dlx(ec_instance: ExactCoverInstance,
     dlx.set_choose_function(cppyy.gbl.choose)
 
     sol = dlx.search()
+
     rows = []
     for i in sol:
         rows.append(dlx.row_obj(i))
@@ -657,13 +659,13 @@ def juggling_sol_to_simulator(sol: JugglingSolution, colors):
     return balls, throws
 
 
-def solve_and_print(music, nb_hands, max_height, max_weight, forbidden_multiplex, method="DLX", optimize=True):
+def solve_and_print(music, nb_hands, max_height, max_weight, forbidden_multiplex, method="DLX", optimize=True, maximize=[]):
     balls, throws = music_to_throws(music)
     ec_instance = throws_to_extended_exact_cover(balls, throws, nb_hands, max_height, max_weight,
                                                  forbidden_multiplex, True)
     sol = None
     if method == "DLX":
-        sol = get_solution_with_dlx(ec_instance)
+        sol = get_solution_with_dlx(ec_instance, maximize)
     elif method == "MILP":
         sol = solve_exact_cover_with_milp(ec_instance, optimize)
     if len(sol) == 0:

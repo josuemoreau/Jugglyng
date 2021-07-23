@@ -86,3 +86,13 @@ dlx.search()
 print(pv[0].get_id())
 print(pv[1].get_id())
 print(pv[2].get_id())
+
+print("=== TEST 7 ===")
+dlx = DLXM()
+pv = dlx.new_variable(1, 1)
+dlx.add_row([pv[0], pv[1], pv[2]])
+dlx.compile()
+print(pv[0].get_id())
+print(pv[1].get_id())
+print(pv[2].get_id())
+

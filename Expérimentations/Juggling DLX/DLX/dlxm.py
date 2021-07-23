@@ -211,7 +211,7 @@ class DLXM():
 
     def primary_variables(self, lower_bound: int, upper_bound: int) -> Optional[DLXMVariable]:
         for var in self.variables:
-            if var.lower_bound == lower_bound and var.upper_bound == upper_bound:
+            if var.lower_bound == lower_bound and var.upper_bound == upper_bound and not var.secondary:
                 return var
         return None
 
