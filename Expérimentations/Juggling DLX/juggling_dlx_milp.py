@@ -20,7 +20,7 @@ for (auto i : {{ {} }})
 """
 
 _choose_model = """
-long int choose(DLX_M::DLX* dlx) {{
+long int choose_{}(DLX_M::DLX* dlx) {{
     long int i = dlx->item(0).rlink;
     long int p;
 
@@ -41,6 +41,8 @@ long int choose(DLX_M::DLX* dlx) {{
     return i;
 }}
 """
+
+_choose_counter = 0
 
 
 class Throw(StructClass):
@@ -601,6 +603,9 @@ def get_solution_with_dlx(ec_instance: ExactCoverInstance,
                           maximize: List[int] = []) \
         -> ExactCoverSolution:
 
+    global _choose_counter
+    _choose_counter += 1
+
     dlx = dlx_solver_instance(ec_instance)
 
     maximized_xvars: List[int] = []
@@ -613,12 +618,12 @@ def get_solution_with_dlx(ec_instance: ExactCoverInstance,
                 maximized_xvars.append(pvar[item].get_id())
 
     if maximized_xvars == []:
-        cppyy.cppdef(_choose_model.format(""))
+        cppyy.cppdef(_choose_model.format(str(_choose_counter), ""))
     else:
         max = _maximize_model.format(", ".join([str(x) for x in maximized_xvars]))
-        cppyy.cppdef(_choose_model.format(max))
+        cppyy.cppdef(_choose_model.format(str(_choose_counter), max))
 
-    dlx.set_choose_function(cppyy.gbl.choose)
+    dlx.set_choose_function(getattr(cppyy.gbl, 'choose_' + str(_choose_counter)))
 
     sol = dlx.search()
 
