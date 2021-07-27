@@ -1,1 +1,2 @@
-print(len({1: True, 2:3}))
+from math import exp
+print(exp(1)**3)

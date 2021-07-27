@@ -2,7 +2,11 @@ from collections import namedtuple
 from enum import Enum
 import random as rd
 from copy import deepcopy
+from math import exp
+from typing import *
 
+rd.seed(1)
+"""
 #Erreurs
 class JugglingError(Exception):
     pass
@@ -56,7 +60,13 @@ def T(self):
         for i in range(1, len(ball)):
             if ball[i] != last_hand:
                 flying = True
-    pass
+    pass"""
+
+#Définitions de types
+SparseMusic = list[tuple[int, str]]
+DenseMusic = list[set[str]]
+HeuristicSequence = dict[str, list[int]]
+HeuristicMask = dict[str, list[bool]]
 
 #HYpothèses :
 #A tout moment, un indivu ne commence ni ne termine pas 0.
@@ -74,14 +84,14 @@ def T(self):
 #hmax = hauteur max > 0
 #nb_hands = nombre de mains
 
-def translate_music_josue(music_josue):
+def translate_music_josue(music_josue: SparseMusic) -> DenseMusic:
     music_josue.sort(key = lambda x : x[0])
-    music_leo = [set() for i in range(music_josue[-1][0]+1)]
+    music_leo : DenseMusic = [set() for i in range(music_josue[-1][0]+1)]
     for note in music_josue:
         music_leo[note[0]].add(note[1])
     return music_leo
 
-def generate_sequence(music, hmax, nb_hands):
+def generate_sequence(music: DenseMusic, hmax: int, nb_hands: int) -> tuple[HeuristicSequence, HeuristicMask, int]:
     balls = find_balls(music)
     #On rajoute à la musique hmax premiers temps pour avoir le temps de lancer les balles.
     mask = {ball : [False]*(hmax) + [ball in notes for notes in music] for ball in balls}
@@ -89,10 +99,12 @@ def generate_sequence(music, hmax, nb_hands):
     seq_len = hmax + len(music)
     return seq, mask, seq_len
 
-def find_balls(music):
-    return set(note for notes in music for note in notes)
+def find_balls(music: DenseMusic) -> list[str]:
+    return list(set(note for notes in music for note in notes))
 
-def choose_neighbour(seq, mask, balls, hmax, nb_hands):
+def choose_neighbour(seq: HeuristicSequence, mask: HeuristicMask,
+                     balls: list[str], hmax: int, nb_hands: int) -> HeuristicSequence:
+    seq = deepcopy(seq)
     p = rd.random()
     ball = rd.choice(balls)
     #On ne s'autaurise pas à prendre de "0" pour l'instant.
@@ -102,12 +114,13 @@ def choose_neighbour(seq, mask, balls, hmax, nb_hands):
     pos_start = pos      #Inclus
     pos_end = pos + 1    #Non inclus
     #On identifie la suite de chiffres identiques à laquelle pos appartient
-    while pos_start >= 0 and seq[ball][pos] == seq[ball][pos_start]:
+    #Notons qu'on commence/arrête cette suite ou bien à un changement de main, ou bien sur une note.
+    while pos_start > 0 and seq[ball][pos] == seq[ball][pos_start - 1] and not mask[ball][pos_start]:
         pos_start -= 1
-    while pos_end <= len(seq[ball]) and seq[ball][pos] == seq[ball][pos_end - 1]:
+    while pos_end < len(seq[ball]) and seq[ball][pos] == seq[ball][pos_end] and not mask[ball][pos_end]:
         pos_end += 1
 
-    if p < 0.1:
+    if False:
         #On change toute la suite de nombres en une autre.
         new_hand = rd.choice([i for i in range(1, nb_hands + 1) if i != seq[ball][pos]])
         for i in range(pos_start, pos_end):
@@ -115,20 +128,21 @@ def choose_neighbour(seq, mask, balls, hmax, nb_hands):
     else:
         #On étend un nombre, ou on le diminue.
         p2 = rd.random()
-        if p2 < 0.5 and pos_end <= len(seq[ball]):
-                seq[pos_end] = seq[pos]
+        if p2 < 0.5 and pos_end < len(seq[ball]):
+                seq[ball][pos_end] = seq[ball][pos]
         else:
-                seq[pos_end - 1] = 0
+                seq[ball][pos_end - 1] = 0
+    return seq
 
 #nb_hands prend en compte
 #position des balles dans les mains à faire ?
 
-def evaluate_sequence(seq, seq_len, hmax, nb_hands, K=4):
+def evaluate_sequence(seq: HeuristicSequence, mask: HeuristicMask, seq_len: int, hmax: int, nb_hands: int, K: int=4) -> float:
     #Condition 1 : Pas plus de K balles en main au même moment
     hand_weight_issues = []
     for t in range(seq_len):
         hand_weight = [0]*(nb_hands+1)
-        for ball_seq in seq:
+        for ball_seq in seq.values():
             hand_weight[ball_seq[t]] += 1
         for hand, weight in enumerate(hand_weight):
             if weight > K:
@@ -142,7 +156,7 @@ def evaluate_sequence(seq, seq_len, hmax, nb_hands, K=4):
             #On ne prend pas en compte les balles silencieuses qui ne sont pas encore implémantées.
             #t-1 indice valable car si hmax > 0, t=0 donne must_play=False.
             if must_play and not(seq[ball][t] != 0 and seq[ball][t] != seq[ball][t-1]):
-                note_not_made.append((t, ball))
+                notes_not_made.append((t, ball))
 
     #Condition 3 : Pas de balle en l'air au début ou à la fin.
     ball_flying_on_sides = []
@@ -156,8 +170,9 @@ def evaluate_sequence(seq, seq_len, hmax, nb_hands, K=4):
     #On considère les lancers de 1 toujours valides donc on ne s'y intéresse pas.
     #On peut donc repérer les lancers par des 0 dans la séquences.
     throws_too_high = []
+    test4 = 0
     for ball, ball_seq in seq.items():
-        flying = False
+        flying = (ball_seq[0] == 0)
         launch_time = 0
         for t, hand in enumerate(ball_seq):
             if hand == 0 and not flying:
@@ -166,32 +181,52 @@ def evaluate_sequence(seq, seq_len, hmax, nb_hands, K=4):
             elif hand != 0 and flying:
                 flying = False
                 height = t - launch_time
+                test4 += height
                 if height > hmax:
-                    throws_too_high.append((t, ball, launch_time, height))
+                    throws_too_high.append((ball, launch_time, height))
                     
-    #Calcul du score :
-    score = - len(hand_weight_issues) - len(notes_not_made) - len(throws_too_high) - len(ball_flying_on_sides)
+    #Calcul du scor(e :
+    #score = - len(hand_weight_issues) - len(notes_not_made) - len(throws_too_high) - len(ball_flying_on_sides)
+    score = - test4
+    return score
 
+def prob(energy_diff: float, temp: float) -> float:
+    return exp(-energy_diff/temp)
 
+def prob2(energy_diff: float, temp: float) -> float:
+    return 1 if energy_diff > 0 else 0
 
-def recuit_simule(music, hmax, nb_hands, max_iter):
+def temperature(i: int, max_iter: int, t0: float) -> float:
+    return t0*(0.99)**i
+
+def recuit_simule(music: DenseMusic, hmax: int, nb_hands: int,
+    max_iter: int, t0: float, prob: Callable[[float, float], float]
+    ) -> tuple[HeuristicSequence, float, list[float], list[float]] :
     seq, mask, seq_len = generate_sequence(music, hmax, nb_hands)
-    print(seq, mask, seq_len)
-    balls = list(find_balls(music))
-    print(balls)
-    score = evaluate_sequence(seq, mask, balls, seq_len, hmax, nb_hands)
-    best_sequence = deepcopy(seq)
+    #print(seq, mask, seq_len)
+    balls = find_balls(music)
+    #print(balls)
+    score = evaluate_sequence(seq, mask, seq_len, hmax, nb_hands)
+    best_seq = seq
     best_score = score
+    score_history = [score]
+    best_score_history = [best_score]
     try:
         for i in range(max_iter):
-            seq = choose_neighbour(seq, mask, balls)
-            score = evaluate_sequence(seq)
-            if score > best_score:
-                best_seq = deepcopy(seq)
-                best_score = score
-        return best_sequence, best_score
+            new_seq = choose_neighbour(seq, mask, balls, hmax, nb_hands)
+            new_score = evaluate_sequence(new_seq, mask, seq_len, hmax, nb_hands)
+            if rd.random() < prob(new_score - score, temperature(i, max_iter, t0)):
+                score = new_score
+                seq = new_seq
+                if score > best_score:
+                    best_seq = seq
+                    best_score = score
+            score_history.append(score)
+            best_score_history.append(best_score)
+        return best_seq, best_score, score_history, best_score_history
     except KeyboardInterrupt:
-        return best_sequence, best_score
+        return best_seq, best_score, score_history, best_score_history
+
 
 
 au_clair_de_la_lune_josue = [( 1, "do"), ( 2, "do"), ( 3, "do"), 
@@ -201,7 +236,11 @@ au_clair_de_la_lune_josue = [( 1, "do"), ( 2, "do"), ( 3, "do"),
 
 music = translate_music_josue(au_clair_de_la_lune_josue)
 print(music)
-recuit_simule(music, 7, 2, 100)
+#a, b, c, d = recuit_simule(music, 7, 2, 1000, 10, prob)
+a, b, c, d = recuit_simule(music, 7, 2, 1000, 10, prob2)
+print(c)
+print(d)
+print(a)
 
 """Throw = namedtuple('Throw', ['ball', 'target', 'height'])
 Swap = namedtuple('Swap', ['hand'])
@@ -215,5 +254,3 @@ class JugglingSample():
     def __init__(self):
         self.max_time
         self.events"""
-
-
