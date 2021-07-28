@@ -329,7 +329,8 @@ def throws_to_extended_exact_cover(balls: Set[str], throws: List[List[Throw]],
 
 
 def solve_exact_cover_with_milp(ec_instance: ExactCoverInstance,
-                                optimize: bool = False) \
+                                optimize: bool = False,
+                                maximize: List[int] = []) \
         -> ExactCoverSolution:
     p = MixedIntegerLinearProgram(maximization=False)
 
@@ -391,9 +392,9 @@ def solve_exact_cover_with_milp(ec_instance: ExactCoverInstance,
             if len(d[item]) > 0:
                 rows_vars = [x[i] for i in d[item]]
                 if isinstance(item, XItem):
-                    if item.flying_time in {3, 4}:  # Maximisation des lancers 3/4
+                    if item.flying_time in maximize:
                         max_throws += sum(rows_vars)
-                    elif item.flying_time in {1, 2, 5, 6, 7}:  # Minimisation des lancers 5/6/7
+                    elif item.flying_time not in maximize:
                         min_throws += sum(rows_vars)
                         min_throws_high += len(rows_vars)
                 elif isinstance(item, WItem):
@@ -672,7 +673,7 @@ def solve_and_print(music, nb_hands, max_height, max_weight, forbidden_multiplex
     if method == "DLX":
         sol = get_solution_with_dlx(ec_instance, maximize)
     elif method == "MILP":
-        sol = solve_exact_cover_with_milp(ec_instance, optimize)
+        sol = solve_exact_cover_with_milp(ec_instance, optimize, maximize)
     if len(sol) == 0:
         raise RuntimeError("No solution.")
     jsol = exact_cover_solution_to_juggling_solution(sol)
@@ -681,15 +682,15 @@ def solve_and_print(music, nb_hands, max_height, max_weight, forbidden_multiplex
     return jsol
 
 
-def solve_and_simulate(music, nb_hands, max_height, max_weight, forbidden_multiplex, colors, sides, method="DLX", optimize=True, step=10):
+def solve_and_simulate(music, nb_hands, max_height, max_weight, forbidden_multiplex, colors, sides, method="DLX", optimize=True, maximize=[], step=10):
     balls, throws = music_to_throws(music)
     ec_instance = throws_to_extended_exact_cover(balls, throws, nb_hands, max_height, max_weight,
                                                  forbidden_multiplex, True)
     sol = None
     if method == "DLX":
-        sol = get_solution_with_dlx(ec_instance)
+        sol = get_solution_with_dlx(ec_instance, maximize)
     elif method == "MILP":
-        sol = solve_exact_cover_with_milp(ec_instance, optimize)
+        sol = solve_exact_cover_with_milp(ec_instance, optimize, maximize)
     if len(sol) == 0:
         raise RuntimeError("No solution.")
     jsol = exact_cover_solution_to_juggling_solution(sol)

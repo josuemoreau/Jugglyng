@@ -64,7 +64,7 @@ class Model:
     #pattern = [MAIN1[(BALLE, VERSMAIN), ...],
     #           MAIN2[...], ...             ],
     #           ...                         ]]
-    def __init__(self, ball_properties, pattern : List[int] = [3]):
+    def __init__(self, ball_properties, pattern: List[int] = [3]):
         """balls : List[Ball] = []
         hands : List[List[Optional[int]]] = []"""
 
@@ -194,13 +194,13 @@ class Model:
         return self.states[t]
 
 class BallView:
-    def __init__(self, ball : Ball):
+    def __init__(self, ball : Ball, out=None):
         self.mesh = Mesh(
             SphereBufferGeometry(5, 32, 16),
             MeshStandardMaterial(color=ball.color)
         )
         #self.tone = mixer.Sound(ball.tone)
-        self.tone = Audio(ball.tone) if ball.tone else None
+        self.tone = Audio(ball.tone, out) if ball.tone else None
 
 class HandView:
     def __init__(self, id: int, throw_times: List[int],
@@ -234,7 +234,7 @@ class HandView:
 class View:
     height_constant = 4
 
-    def __init__(self, model : Model, sides: List[int]):
+    def __init__(self, model : Model, sides: List[int], out=None):
 
         self.model : Model = model
 
@@ -243,7 +243,7 @@ class View:
 
         self.time_in_hand = 0.5
         initial_state = self.model.state(0)
-        self.balls : List[BallView] = {name : BallView(ball)
+        self.balls : List[BallView] = {name : BallView(ball, out)
                                        for name, ball in initial_state.balls.items()}
 
         # Création des vues des mains
