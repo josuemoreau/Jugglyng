@@ -148,6 +148,15 @@ class WItem(Item):
         }, ["time", "hand"], low=0, high=max_weight)
 
 
+class DItem(Item):
+    def __init__(self, time, hand, multiplex):
+        super().__init__("d", {
+            "time": time,
+            "hand": hand,
+            "multiplex": multiplex
+        }, ["time", "hand", "multiplex"])
+
+
 class MItem(Item):
     def __init__(self, time, hand, multiplex):
         super().__init__("m", {
@@ -157,9 +166,9 @@ class MItem(Item):
         }, ["time", "hand", "multiplex"], low=0, high=len(multiplex) - 1)
 
 
-class DItem(Item):
+class CItem(Item):
     def __init__(self, time, hand):
-        super().__init__("d", {
+        super().__init__("c", {
             "time": time,
             "hand": hand
         }, ["time", "hand"], low=0, high=1)
@@ -224,9 +233,10 @@ def throws_to_extended_exact_cover(balls: Set[str], throws: List[List[Throw]],
     x_items = {}
     l_items = {}
     w_items = {}
-    m_items = {}
-    m_items_bounds = {}
     d_items = {}
+    m_items = {}
+    # m_items_bounds = {}
+    c_items = {}
     u_items = {}
 
     colors = {}
@@ -235,8 +245,11 @@ def throws_to_extended_exact_cover(balls: Set[str], throws: List[List[Throw]],
     rows = []
     # Remplissage du dictionnaire des lancers multiplex interdits
     for fm in forbidden_multiplex:
-        for i in fm:
-            fmultiplex[i].append(fm)
+        if len(fm) == 2:
+            fmultiplex[fm[0]].append(fm)
+            fmultiplex[fm[1]].append(fm)
+        # for i in fm:
+        #     fmultiplex[i].append(fm)
     # Calcul du plus tard temps où atterrit une balle
     for t in range(len(throws) - 1, -1, -1):
         if len(throws[t]) > 0:
@@ -256,32 +269,39 @@ def throws_to_extended_exact_cover(balls: Set[str], throws: List[List[Throw]],
                 for flying_time in range(min(H, throw.max_height) + 1):
                     x = XItem(throw=throw, hand=hand, flying_time=flying_time)
                     x_items[(throw, hand, flying_time)] = x
-    # Génération des items w, M, D et U
+    # Génération des items w, D, M, C et U
     for t in range(max_time + 1):
         for hand in range(nb_hands):
             w = WItem(max_weight=max_weight, time=t, hand=hand)
             w_items[(t, hand)] = w
 
-            d = DItem(time=t, hand=hand)
-            d_items[(t, hand)] = d
+            c = CItem(time=t, hand=hand)
+            c_items[(t, hand)] = c
 
             for f in forbidden_multiplex:
                 if len(f) == 1:
                     fflying_time.append(f[0])
-                else:
+                elif len(f) == 2 and f[0] == f[1]:
+                    d = DItem(time=t, hand=hand, multiplex=f)
+                    d_items[(t, hand, f)] = d
+                    # m = MItem(time=t, hand=hand, multiplex=f)
+                    # m_items[(t, hand, f)] = m
+                    # m_items_bounds[f] = (0, len(f) - 1)
+                elif len(f) == 2:
                     m = MItem(time=t, hand=hand, multiplex=f)
                     m_items[(t, hand, f)] = m
-                    m_items_bounds[f] = (0, len(f) - 1)
+                else:
+                    raise Exception("Erreur: l'interdiction de lancers multiplex de taille > 2 n'est pas supportée.")
 
             for ball in balls:
                 u = UItem(ball=ball, time=t, hand=hand)
                 u_items[(ball, t, hand)] = u
     # Génération des couleurs
-    colors["false"] = 1
-    colors["true"] = 2
-    k = 3
-    for ball in balls:
-        colors[ball] = k
+    # colors["false"] = 1
+    # colors["true"] = 2
+    k = 1
+    for h in range(1, max_height + 1):
+        colors[h] = k
         k += 1
     # Génération des lignes
     for t in range(len(throws)):
@@ -293,10 +313,15 @@ def throws_to_extended_exact_cover(balls: Set[str], throws: List[List[Throw]],
                     row: List[Union[Item, Tuple[Item, int]]] = \
                         [x_items[(throw, hand, flying_time)], l_items[throw]]
                     if not multiple_throws:
-                        row.append(d_items[(t + throw.max_height - flying_time, hand)])
+                        row.append(c_items[(t + throw.max_height - flying_time, hand)])
                     for fmulti in fmultiplex[flying_time]:
-                        row.append(m_items[(t + throw.max_height - flying_time,
-                                   hand, fmulti)])
+                        if fmulti[0] == fmulti[1]:
+                            row.append(d_items[(t + throw.max_height - flying_time,
+                                                hand, fmulti)])
+                        else:
+                            row.append((m_items[(t + throw.max_height - flying_time,
+                                                 hand, fmulti)],
+                                        colors[flying_time]))
                     for t1 in range(t, t + throw.max_height - flying_time + 1):
                         row.append(w_items[(t1, hand)])
 
@@ -310,15 +335,16 @@ def throws_to_extended_exact_cover(balls: Set[str], throws: List[List[Throw]],
 
     colors_list: List[str] = ["" for i in range(k)]
     for clr, i in colors.items():
-        colors_list[i] = clr
+        colors_list[i] = str(clr)
 
     return ExactCoverInstance(prim_items=list(x_items.values())  # type: ignore
                               + list(l_items.values())           # type: ignore
                               + list(w_items.values())           # type: ignore
                               + list(m_items.values())           # type: ignore
-                              + list(d_items.values())           # type: ignore
-                              + list(u_items.values()),          # type: ignore
-                              sec_items=[],
+                              + list(c_items.values())           # type: ignore
+                              + list(u_items.values())           # type: ignore
+                              + list(d_items.values()),          # type: ignore
+                              sec_items=list(m_items.values()),
                               colors=colors_list,
                               rows=rows,
                               params={
@@ -359,12 +385,12 @@ def solve_exact_cover_with_milp(ec_instance: ExactCoverInstance,
             #     elif item.flying_time in {5, 6, 7}:  # Minimisation des lancers 5/6/7
             #         min_expr += sum(rows_vars)
             #         min_high += len(rows_vars)
-            # elif isinstance(item, DItem):
+            # elif isinstance(item, CItem):
             #     d_expr[(item.time, item.hand)] = sum(rows_vars)
             p.add_constraint(item.bounds[0]
                              <= sum(rows_vars)
                              <= item.bounds[1])
-        # elif isinstance(item, DItem):
+        # elif isinstance(item, CItem):
         #     d_expr[(item.time, item.hand)] = 0
 
     if optimize:
