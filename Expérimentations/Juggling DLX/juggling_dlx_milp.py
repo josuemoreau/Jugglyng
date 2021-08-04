@@ -246,8 +246,11 @@ def throws_to_extended_exact_cover(balls: Set[str], throws: List[List[Throw]],
     # Remplissage du dictionnaire des lancers multiplex interdits
     for fm in forbidden_multiplex:
         if len(fm) == 2:
-            fmultiplex[fm[0]].append(fm)
-            fmultiplex[fm[1]].append(fm)
+            if fm[0] == fm[1]:
+                fmultiplex[fm[0]].append(fm)
+            else:
+                fmultiplex[fm[0]].append(fm)
+                fmultiplex[fm[1]].append(fm)
         # for i in fm:
         #     fmultiplex[i].append(fm)
     # Calcul du plus tard temps où atterrit une balle
@@ -279,7 +282,7 @@ def throws_to_extended_exact_cover(balls: Set[str], throws: List[List[Throw]],
             c_items[(t, hand)] = c
 
             for f in forbidden_multiplex:
-                if len(f) == 1:
+                if len(f) == 1 and f[0] not in fflying_time:
                     fflying_time.append(f[0])
                 elif len(f) == 2 and f[0] == f[1]:
                     d = DItem(time=t, hand=hand, multiplex=f)
