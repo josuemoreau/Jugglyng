@@ -154,7 +154,7 @@ class DItem(Item):
             "time": time,
             "hand": hand,
             "multiplex": multiplex
-        }, ["time", "hand", "multiplex"])
+        }, ["time", "hand", "multiplex"], low=0, high=1)
 
 
 class MItem(Item):
@@ -163,7 +163,7 @@ class MItem(Item):
             "time": time,
             "hand": hand,
             "multiplex": multiplex
-        }, ["time", "hand", "multiplex"], low=0, high=len(multiplex) - 1)
+        }, ["time", "hand", "multiplex"])
 
 
 class CItem(Item):
@@ -333,9 +333,9 @@ def throws_to_extended_exact_cover(balls: Set[str], throws: List[List[Throw]],
                                             hand)])
                     rows.append(row)
 
-    colors_list: List[str] = ["" for i in range(k)]
-    for clr, i in colors.items():
-        colors_list[i] = str(clr)
+    colors_list: List[int] = [0 for i in range(k)]
+    for h, clr in colors.items():
+        colors_list[clr] = h
 
     return ExactCoverInstance(prim_items=list(x_items.values())  # type: ignore
                               + list(l_items.values())           # type: ignore
@@ -362,23 +362,30 @@ def solve_exact_cover_with_milp(ec_instance: ExactCoverInstance,
 
     # Calcul, pour chaque colonne, des lignes qui ont un élément dans cette
     # colonne
-    d: Dict[Union[Item, Tuple[Item, int]],
-            List[int]] \
+    d_prim: Dict[Item, List[int]] \
         = {item: [] for item in ec_instance.prim_items}
+    # d_sec: Dict[Tuple[Item, int], List[int]] \
+    #     = {(item, clr): []
+    #        for item in ec_instance.sec_items
+    #        for clr in range(1, len(ec_instance.colors) + 1)}
     for i in range(len(ec_instance.rows)):
         row = ec_instance.rows[i]
         for item in row:
-            d[item].append(i)
+            if isinstance(item, Item):
+                d_prim[item].append(i)
+            # else:
+            #     it, clr = item
+            #     d_sec[(it, clr)].append(i)
 
     # Dictionnaire pour stocker les expressions permettant de calculer les
     # variables D(t, m)
     d_expr = {}
 
-    # Génération de l'instance de MILP
+    # Génération des contraintes pour les éléments primaires
     x = p.new_variable(binary=True)
     for item in ec_instance.prim_items:
-        if len(d[item]) > 0:
-            rows_vars = [x[i] for i in d[item]]
+        if len(d_prim[item]) > 0:
+            rows_vars = [x[i] for i in d_prim[item]]
             # if isinstance(item, XItem):
             #     if item.flying_time in {3, 4}:  # Maximisation des lancers 3/4
             #         max_expr += sum(rows_vars)
@@ -392,6 +399,16 @@ def solve_exact_cover_with_milp(ec_instance: ExactCoverInstance,
                              <= item.bounds[1])
         # elif isinstance(item, CItem):
         #     d_expr[(item.time, item.hand)] = 0
+
+    # Génération des contraintes pour les éléments secondaires
+    # a = p.new_variable(binary=True)
+    # for item in ec_instance.sec_items:
+    #     s = 0
+    #     for clr in range(1, len(ec_instance.colors)):
+    #         s += a[(item, clr)]
+    #         for r in d_sec[(item, clr)]:
+    #             p.add_constraint(a[(item, clr)] >= x[r])
+    #     p.add_constraint(s <= 1)
 
     if optimize:
         # Minimisation du nombre de lancers en même temps depuis des mains
@@ -415,15 +432,20 @@ def solve_exact_cover_with_milp(ec_instance: ExactCoverInstance,
 
         o = p.new_variable(binary=True)
         for item in ec_instance.prim_items:
-            if len(d[item]) > 0:
-                rows_vars = [x[i] for i in d[item]]
+            if len(d_prim[item]) > 0:
+                rows_vars = [x[i] for i in d_prim[item]]
                 if isinstance(item, XItem):
+                    # minimisation de certains lancers
+                    # (i.e. maximisation des autres)
                     if item.flying_time in maximize:
                         max_throws += sum(rows_vars)
                     elif item.flying_time not in maximize:
                         min_throws += sum(rows_vars)
                         min_throws_high += len(rows_vars)
                 elif isinstance(item, WItem):
+                    # minimisation du nombre de lancers multiplex
+                    # (au sens du livre, i.e. les lancers où il y a plusieurs
+                    #  balles dans la main, même si toutes ne sont pas lancées)
                     p.add_constraint(o[(item.time, item.hand)]
                                      >= (sum(rows_vars) - 1) / ec_instance.params['max_weight'])
                     multiplex_throws += o[(item.time, item.hand)]
