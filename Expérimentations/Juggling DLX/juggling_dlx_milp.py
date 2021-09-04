@@ -284,6 +284,8 @@ def throws_to_extended_exact_cover(balls: Set[str], throws: List[List[Throw]],
             for f in forbidden_multiplex:
                 if len(f) == 1 and f[0] not in fflying_time:
                     fflying_time.append(f[0])
+                elif len(f) == 1:
+                    pass
                 elif len(f) == 2 and f[0] == f[1]:
                     d = DItem(time=t, hand=hand, multiplex=f)
                     d_items[(t, hand, f)] = d
@@ -783,7 +785,7 @@ def print_juggling_solution(sol):
                               item.flying_time))
 
 
-def print_juggling(sol: JugglingSolution):
+def juggling_to_formatted_str(sol: JugglingSolution):
     max_time = sol.params['max_time']
     in_hand: List[List[Set[str]]] = [[set() for _ in range(sol.params['nb_hands'])]
                                      for _ in range(max_time + 1)]
@@ -820,6 +822,7 @@ def print_juggling(sol: JugglingSolution):
             if len(s) > max_hand_width[i]:
                 max_hand_width[i] = len(s)
     max_hands_width = sum(max_hand_width)
+    output = ""
     for t in range(max_time):
         s = ""
         for i in range(sol.params['nb_hands']):
@@ -833,16 +836,22 @@ def print_juggling(sol: JugglingSolution):
                  .format(ball, flying_time,
                          hand[t + flying_time][ball]
                          if ball in hand[t + flying_time] else "?")
-            print(s)
+            output += s + "\n"
             for i in range(1, len(throws[t])):
                 ball, flying_time = throws[t][i]
-                print(" " * (max_hands_width + 2), end="")
-                print("{} -- {} --> {}"
-                      .format(ball, flying_time,
-                              hand[t + flying_time][ball]
-                              if ball in hand[t + flying_time] else "?"))
+                output += " " * (max_hands_width + 2)
+                output += "{} -- {} --> {}" \
+                    .format(ball, flying_time,
+                            hand[t + flying_time][ball]
+                            if ball in hand[t + flying_time] else "?") + "\n"
         else:
-            print(s)
+            output += s + "\n"
+    return output
+
+
+def print_juggling(sol: JugglingSolution):
+    print(juggling_to_formatted_str(sol))
+    return None
 
 
 # ============================================================================ #
