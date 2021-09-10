@@ -1,0 +1,1 @@
+{"balls": [{"name": "Bleu", "lower_hsv": [107, 172, 128], "higher_hsv": [115, 255, 255], "data": {}, "count": 1}, {"name": "Vert", "lower_hsv": [63, 188, 47], "higher_hsv": [84, 255, 152], "data": {}, "count": 1}], "thresholds": [0, 0]}

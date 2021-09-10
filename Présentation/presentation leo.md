@@ -72,12 +72,12 @@ import ipywidgets as widgets
 ### Suivi de balles
 
 ```{code-cell} ipython3
-tracker = BallTracker(source='../videos/vincent_court.mp4')  
+tracker = BallTracker(source=1, data_path="test.json")  
 tracker.start()
 ```
 
 ```{code-cell} ipython3
-tracker.load_config(path='Présentation/vincent_court.json')
+tracker.save_config(path='test.json')
 ```
 
 +++ {"slideshow": {"slide_type": "subslide"}}
