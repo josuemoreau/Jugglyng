@@ -10,7 +10,7 @@ from pylatex import Document
 from pylatex.utils import NoEscape
 
 import modele
-import ipywidgets
+import ipywidgets as ipw
 import pythreejs
 
 _maximize_model = """
@@ -750,8 +750,8 @@ def solve_and_simulate(music, nb_hands, max_height, max_weight, forbidden_multip
     balls, pattern = juggling_sol_to_simulator(jsol, colors)
 
     model = modele.Model(balls, pattern)
-    # slider = ipywidgets.FloatSlider(min=0, max=40, step=0.05)
-    play = ipywidgets.Play(
+    # slider = ipw.FloatSlider(min=0, max=40, step=0.05)
+    play = ipw.Play(
         value=0,
         min=0,
         max=4000,
@@ -760,11 +760,11 @@ def solve_and_simulate(music, nb_hands, max_height, max_weight, forbidden_multip
         description="Press play",
         disabled=False
     )
-    slider = ipywidgets.IntSlider(min=0, max=4000)
-    ipywidgets.jslink((play, 'value'), (slider, 'value'))
+    slider = ipw.IntSlider(min=0, max=4000)
+    ipw.jslink((play, 'value'), (slider, 'value'))
     view = modele.View(model, sides)
     slider.observe(lambda change: view.update(change['new'] / 100, change['old'] / 100), names="value")
-    return ipywidgets.VBox([view.widget, ipywidgets.HBox([play, slider])])
+    return ipw.VBox([view.widget, ipw.HBox([play, slider])])
 
 
 # ============================================================================ #
@@ -852,6 +852,326 @@ def juggling_to_formatted_str(sol: JugglingSolution):
 def print_juggling(sol: JugglingSolution):
     print(juggling_to_formatted_str(sol))
     return None
+
+
+def display_interface():
+    out = ipw.Output()
+
+    l_inttext = ipw.Layout(width='100px')
+    l_text = ipw.Layout(width='150px')
+    l_simulation_text = ipw.Layout(width='400px')
+
+    w_nb_hands = ipw.IntText(
+        value=2,
+        disabled=False,
+        layout=l_inttext
+    )
+    w_max_weight = ipw.IntText(
+        value=3,
+        disabled=False,
+        layout=l_inttext
+    )
+    w_max_height = ipw.IntText(
+        value=5,
+        disabled=False,
+        layout=l_inttext
+    )
+    w_no_multiplex = ipw.Checkbox(
+        value=False,
+        disabled=False,
+        indent=False
+    )
+    w_generate_forbidden_multiplex = ipw.Button(
+        description='Générer',
+        disabled=False,
+        button_style='',
+        icon='refresh'
+    )
+    w_forbidden_multiplex = ipw.SelectMultiple(
+        options=[''],
+        value=[],
+        disabled=False,
+    )
+    w_forbidden_throws = ipw.Text(
+        value='',
+        placeholder='',
+        disabled=False
+    )
+
+    def fill_forbidden_multiplex(args):
+        nonlocal w_forbidden_multiplex
+        old_options = w_forbidden_multiplex.options
+        selected = w_forbidden_multiplex.value
+        max_height = w_max_height.value
+        options = []
+        for i in range(1, max_height + 1):
+            for j in range(i, max_height + 1):
+                options.append(str(i) + ", " + str(j))
+        w_forbidden_multiplex.options = options
+        w_forbidden_multiplex.disabled = w_no_multiplex.value
+        new_selected = []
+        for s in selected:
+            i = int(s.split(', ')[0])
+            j = int(s.split(', ')[1])
+            if i <= max_height and j <= max_height:
+                new_selected.append(str(i) + ', ' + str(j))
+        w_forbidden_multiplex.value = new_selected
+        # logger.debug(old_options)
+        if len(old_options) == 1:
+            w_forbidden_multiplex.selected = ["1, 1", "1, 2", "1, 3", "1, 4", "1, 5"]
+        out.clear_output()
+        with out:
+            display(ui)
+
+    w_maximize = ipw.Text(
+        value='',
+        placeholder='',
+        disabled=False
+    )
+    w_generate_hands = ipw.Button(
+        description='Générer',
+        disabled=False,
+        button_style='',
+        icon='refresh'
+    )
+    hands_constraints = {}
+    w_hands_constraints = ipw.Accordion([])
+
+    def fill_hand_constraints(args):
+        nonlocal hands_constraints, w_hands_constraints
+        max_weight_old = len(hands_constraints) + 1
+        max_weight = w_max_weight.value
+        if max_weight > max_weight_old:
+            for k in range(max_weight_old + 1, max_weight + 1):
+                w_throw = ipw.BoundedIntText(value=1, min=1, max=k, step=1, disabled=False, layout=l_text)
+                w_catch = ipw.BoundedIntText(value=k, min=1, max=k, step=1, disabled=False, layout=l_text)
+                w_perm = ipw.Text(value='', placeholder='', disabled=False, layout=l_text)
+                hands_constraints[k] = {
+                    'throw': w_throw,
+                    'catch': w_catch,
+                    'perm': w_perm,
+                    'box': ipw.GridBox([
+                        ipw.Label('Lancer :'), w_throw,
+                        ipw.Label('Récupération :'), w_catch,
+                        ipw.Label('Permutations :'), w_perm
+                    ], layout=ipw.Layout(grid_template_columns="repeat(2, 100px)"))
+                }
+        else:
+            for k in range(max_weight + 1, max_weight_old + 1):
+                hands_constraints.pop(k)
+        w_hands_constraints = ipw.Accordion([hands_constraints[k]['box'] for k in range(2, max_weight + 1)], layout=ipw.Layout(width='300px'))
+        for k in range(2, max_weight + 1):
+            w_hands_constraints.set_title(index=k - 2, title=str(k) + " mains")
+        tab.children = [tab1, tab2, tab3()]
+        out.clear_output()
+        with out:
+            display(ui)
+
+    def tab3():
+        return ipw.GridBox([
+            ipw.Label('Contraintes sur les mains :'), w_generate_hands,
+            ipw.Label(''), w_hands_constraints
+        ], layout=ipw.Layout(grid_template_columns="repeat(2, 210px)"))
+    tab1 = ipw.GridBox([
+        ipw.Label('Nombre de mains :'), w_nb_hands,
+        ipw.Label('Nombre maximal de balles dans une main :'), w_max_weight,
+        ipw.Label('Hauteur maximale :'), w_max_height
+    ], layout=ipw.Layout(grid_template_columns="repeat(2, 260px)"))
+    tab2 = ipw.GridBox([
+        ipw.Label('Maximiser les lancers :'), w_maximize,
+        ipw.Label('Aucun lancer multiple :'), w_no_multiplex,
+        ipw.Label('Lancers interdits :'), w_forbidden_throws,
+        ipw.Label('Lancers multiples interdits :'), w_generate_forbidden_multiplex,
+        ipw.VBox([
+            ipw.Label('(maintenir Ctrl pour', layout=ipw.Layout(height='20px')),
+            ipw.Label('sélectionner/désélectionner)', layout=ipw.Layout(height='20px'))]),
+        w_forbidden_multiplex
+    ], layout=ipw.Layout(grid_template_columns="repeat(2, 170px)"))
+
+    tab = ipw.Tab(layout=ipw.Layout(width='550px', margin='0px 0px 10px 0px'))
+    tab.children = [tab1, tab2, tab3()]
+    tab.set_title(index=0, title="Général")
+    tab.set_title(index=1, title="Lancers")
+    tab.set_title(index=2, title="Mains")
+
+    model = modele.Model({}, [[], []])
+    play = ipw.Play(
+        value=0,
+        min=0,
+        max=4000,
+        step=5,
+        interval=30,
+        description="Press play",
+        disabled=False
+    )
+    slider = ipw.IntSlider(min=0, max=4000)
+    ipw.jslink((play, 'value'), (slider, 'value'))
+    view = modele.View(model, [-1, -1, 1])
+    slider.observe(lambda change: view.update(change['new'] / 100, change['old'] / 100), names="value")
+
+    w_music = ipw.Textarea(
+        value='[1 do] [2 do] [3 do] [4 re] [5 mi] [7 re] [9 do] [10 mi] [11 re] [12 re] [13 do]',
+        placeholder='',
+        description='',
+        disabled=False,
+        layout=ipw.Layout(width='475px', margin='0px 0px 10px 0px')
+    )
+    w_working = ipw.Label('Prêt')
+    w_solve = ipw.Button(
+        description='Résoudre les contraintes',
+        disabled=False,
+        button_style='',
+        icon='check',
+        layout=ipw.Layout(width='345px')
+    )
+    w_simulate = ipw.Button(
+        description='Simuler',
+        disabled=True,
+        button_style='',
+        icon='check',
+        layout=ipw.Layout(width='200px')
+    )
+    w_step = ipw.IntText(
+        value=5,
+        disabled=False,
+        layout=l_inttext
+    )
+    w_sides = ipw.Text(
+        value='-1, 1',
+        placeholder='',
+        disabled=False,
+        layout=l_simulation_text
+    )
+    w_colors = ipw.Text(
+        value='blue, red, green, yellow, purple, cyan, magenta',
+        placeholder='',
+        disabled=False,
+        layout=l_simulation_text
+    )
+    w_method = ipw.RadioButtons(
+        options=['Programmation Linéaire (rapide, ne respecte pas les contraintes sur les mains)',
+                 'Dancing Links (lent, respecte les contraintes sur les mains)'],
+        description='',
+        disabled=False,
+        layout={'width': 'max-content'}
+    )
+    w_result = ipw.Textarea(
+        value='',
+        placeholder='',
+        disabled=True,
+        layout={'width': '516px', 'height': '553px'}
+    )
+
+    # balls = {}
+    # pattern = [[], []]
+    jsol = None
+    tab_res_sim = ipw.Tab()
+
+    def ui_view(view, play, slider):
+        tab_res_sim.children = [ipw.VBox([view.widget, ipw.HBox([play, slider])], layout=ipw.Layout(margin="10px")), w_result]
+        tab_res_sim.set_title(index=0, title="Simulation")
+        tab_res_sim.set_title(index=1, title="Résultat")
+        return ipw.HBox([
+            ipw.VBox([
+                ipw.HBox([ipw.Label('Musique :', layout=ipw.Layout(width='70px')), w_music]),
+                tab,
+                ipw.GridBox([
+                    ipw.Label('Pas :'), w_step,
+                    ipw.Label('Orientation des mains :'), w_sides,
+                    ipw.Label('Couleurs :'), w_colors
+                ], layout=ipw.Layout(grid_template_columns='repeat(2, 150px)')),
+                w_working,
+                w_method,
+                ipw.HBox([w_solve, w_simulate])], layout=ipw.Layout(margin="10px")),
+            tab_res_sim
+        ])
+
+    def solve(args):
+        nonlocal jsol
+        if w_working.value != "Prêt":
+            return
+        music = []
+        for s in w_music.value.split('] ['):
+            s1 = s.strip()
+            if s1[0] == '[':
+                s1 = s1[1:]
+            elif s1[-1] == ']':
+                s1 = s1[:-1]
+            p = s1.split(' ')
+            for i in range(1, len(p)):
+                music.append((int(p[0]), p[i]))
+
+        nb_hands = w_nb_hands.value
+        max_height = w_max_height.value
+        max_weight = w_max_weight.value
+        forbidden_multiplex = []
+        if w_forbidden_throws.value.strip() != '':
+            for s in w_forbidden_throws.value.split(' '):
+                i = int(s)
+                forbidden_multiplex.append((i, ))
+        for s in w_forbidden_multiplex.value:
+            i = int(s.split(', ')[0])
+            j = int(s.split(', ')[1])
+            forbidden_multiplex.append((i, j))
+        maximize = [int(s) for s in w_maximize.value.split(' ')] if w_maximize.value.strip() != '' else []
+        method = 'DLX' if w_method.value.startswith('Dancing Links') else 'MILP'
+        optimize = w_maximize.value != ""
+        w_working.value = "En cours..."
+        balls, throws = music_to_throws(music)
+        ec_instance = throws_to_extended_exact_cover(balls, throws, nb_hands, max_height, max_weight,
+                                                     forbidden_multiplex, True)
+        sol = None
+        if method == "DLX":
+            sol = get_solution_with_dlx(ec_instance, maximize=maximize)
+        elif method == "MILP":
+            sol = solve_exact_cover_with_milp(ec_instance, optimize=optimize, maximize=maximize)
+        if len(sol) == 0:
+            raise RuntimeError("No solution.")
+        jsol = exact_cover_solution_to_juggling_solution(sol)
+        formatted_str = juggling_to_formatted_str(jsol)
+        w_result.value = formatted_str
+        w_working.value = "Prêt"
+        w_simulate.disabled = False
+        tab_res_sim.selected_index = 1
+
+    def simulate(args):
+        colors = w_colors.value.split(', ')
+        sides = [int(x) for x in w_sides.value.split(', ')]
+        step = w_step.value
+        balls, pattern = juggling_sol_to_simulator(jsol, colors)
+        model = modele.Model(balls, pattern)
+        play = ipw.Play(
+            value=0,
+            min=0,
+            max=4000,
+            step=step,
+            interval=30,
+            description="Press play",
+            disabled=False
+        )
+        slider = ipw.IntSlider(min=0, max=4000)
+        ipw.jslink((play, 'value'), (slider, 'value'))
+        view = modele.View(model, sides, out)
+        slider.observe(lambda change: view.update(change['new'] / 100, change['old'] / 100), names="value")
+        with out:
+            out.clear_output()
+            tab_res_sim.selected_index = 0
+            display(ui_view(view, play, slider))
+
+    w_generate_forbidden_multiplex.on_click(fill_forbidden_multiplex)
+    w_generate_hands.on_click(fill_hand_constraints)
+    w_solve.on_click(solve)
+    w_simulate.on_click(simulate)
+
+    ui = ui_view(view, play, slider)
+
+    with out:
+        display(ui)
+    return out
+
+
+
+
 
 
 # ============================================================================ #
