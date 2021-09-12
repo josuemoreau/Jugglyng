@@ -25,7 +25,7 @@ jupyter:
     slideNumber: true
     start_slideshow_at: selected
     transition: none
-    width: 90%
+    width: 100%
 ---
 
 ```python slideshow={"slide_type": "skip"}
