@@ -4,12 +4,21 @@ channels:
 - conda-forge
 
 dependencies:
-- python=3.8
+- python=3.9
+# Graphiques
+- jupyter
+- jupyterlab
 - notebook
 - ipywidgets
 - pythreejs
+# Algorithme de composition
+- numpy
+- cppyy
+- sage
 - pip
 - pip:
-  - playsound
   - recordclass
-  - simpleaudio
+  # Son
+  - jp_proxy_widget
+# Autres
+- pylatex
