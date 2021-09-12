@@ -19,6 +19,7 @@ dependencies:
 - pip
 - pip:
   - recordclass==0.14.3
+  - typing-extensions
   # Son
   - jp_proxy_widget
 # Autres
