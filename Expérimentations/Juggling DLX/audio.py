@@ -8,7 +8,7 @@ _dirname = os.path.dirname(os.path.abspath(__file__))
 
 
 class Audio():
-    def __init__(self, filename):
+    def __init__(self, filename, out=None):
         self.widget = jp_proxy_widget.JSProxyWidget()
         self.js = _dirname + "/howler.js"
 
@@ -28,7 +28,11 @@ class Audio():
             });
             """, url=self.url)
 
-        display(self.widget)
+        if out is not None:
+            with out:
+                display(self.widget)
+        else:
+            display(self.widget)
 
     def play(self):
         self.widget.element.sound.play()

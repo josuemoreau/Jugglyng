@@ -9,9 +9,12 @@ class Conc : public AbstrItem {
 public:
     Conc(string s) { this->s = s; }
     void print() { cout << this->s; }
+    void set_id(INT i) { this->dlx_id = i; }
+    INT get_id() { return this->dlx_id; }
 
 private:
     string s;
+    INT dlx_id = 0;
 };
 
 void test1() {
@@ -162,6 +165,53 @@ void test7() {
     dlx.all_solutions(true);
 }
 
+void test8() {
+    Conc *a = new Conc("a");
+    Conc *b = new Conc("b");
+    Conc *c = new Conc("c");
+
+    vector<tuple<AbstrItem*, INT, INT>> primary = {
+        make_tuple(a, 0, 1),
+        make_tuple(b, 1, 1),
+        make_tuple(c, 0, 1)
+    };
+
+    DLX dlx(primary, {}, {});
+    dlx.add_row({a, b, c}, {});
+    dlx.add_row({b}, {});
+    dlx.add_row({c}, {});
+
+    dlx.print_table();
+
+    try {
+        dlx.print_solution(dlx.search(false));
+        dlx.print_solution(dlx.search(true));
+        dlx.print_solution(dlx.search(true));
+        dlx.print_solution(dlx.search(true));
+    } catch (const NoSolution& e) {
+        cout << "No solution !" << endl;
+    }
+    
+}
+
+void test9() {
+    Conc *a = new Conc("a");
+    Conc *b = new Conc("b");
+    Conc *c = new Conc("c");
+
+    vector<tuple<AbstrItem*, INT, INT>> primary = {
+        make_tuple(a, 0, 1),
+        make_tuple(b, 1, 1),
+        make_tuple(c, 0, 1)
+    };
+
+    DLX dlx(primary, {}, {});
+
+    cout << "a : " << a->get_id() << endl;
+    cout << "b : " << b->get_id() << endl;
+    cout << "c : " << c->get_id() << endl;
+}
+
 int main(int argc, char** argv) {
     // cout << "======== TEST 1 ========" << endl;
     // test1();
@@ -171,12 +221,16 @@ int main(int argc, char** argv) {
     // test3();
     // cout << "======== TEST 4 ========" << endl;
     // test4();
-    // cout << "======== TEST 5 ========" << endl;
-    // test5();
+    cout << "======== TEST 5 ========" << endl;
+    test5();
     // cout << "======== TEST 6 ========" << endl;
     // test6();
-    cout << "======== TEST 7 ========" << endl;
-    test7();
+    // cout << "======== TEST 7 ========" << endl;
+    // test7();
+    cout << "======== TEST 8 ========" << endl;
+    test8();
+    cout << "======== TEST 9 ========" << endl;
+    test9();
 
     return 0;
 }

@@ -15,7 +15,22 @@ using namespace DLX_M;
 
 DLX::DLX(vector<tuple<AbstrItem*, INT, INT>> primary,
          vector<AbstrItem*> secondary, 
-         vector<tuple<vector<AbstrItem*>, vector<tuple<AbstrItem*, COLOR>>>> rows) {
+         vector<tuple<vector<AbstrItem*>, vector<tuple<AbstrItem*, COLOR>>>> rows) :
+    DLX(primary, secondary, rows, [](DLX* dlx) -> INT {
+        INT i = dlx->items[0].rlink;
+        INT p;
+
+        for (p = i; p != 0; p = dlx->items[p].rlink)
+            if (dlx->options[p].tl < dlx->options[i].tl)
+                i = p;
+
+        return i;
+    }) {}
+
+DLX::DLX(vector<tuple<AbstrItem*, INT, INT>> primary,
+         vector<AbstrItem*> secondary, 
+         vector<tuple<vector<AbstrItem*>, vector<tuple<AbstrItem*, COLOR>>>> rows,
+         function<INT(DLX*)> choose) {
     INT i = 0;
     AbstrItem* name;
     INT u, v;
@@ -29,6 +44,8 @@ DLX::DLX(vector<tuple<AbstrItem*, INT, INT>> primary,
         tie(name, u, v) = item;
         this->items.push_back(Primary(name, i, i + 2, v - u, v));
         this->corresp.emplace(name, i + 1);
+        // cout << "Set dlx_id for item " << i + 1 << endl;
+        name->set_id(i + 1);
         this->options.push_back(HNode(0, i + 1, i + 1, -1));
         this->nb_option_nodes++;
         i++;
@@ -59,6 +76,12 @@ DLX::DLX(vector<tuple<AbstrItem*, INT, INT>> primary,
         tie(row_primary, row_secondary) = row;
         this->add_row(row_primary, row_secondary);
     }
+
+    this->choose = choose;
+    this->covered = (bool *) malloc(sizeof(bool) * (this->nb_primary + 1));
+    this->covered[0] = true;
+    for (int k = 1; k <= this->nb_primary; k++)
+        this->covered[k] = false;
 }
 
 void DLX::add_row(vector<AbstrItem*> row_primary, 
@@ -109,6 +132,7 @@ void DLX::cover(INT i) {
     INT r = RLINK(i);
     RLINK(l) = r;
     LLINK(r) = l;
+    this->covered[i] = true;
 }
 
 void DLX::hide(INT p) {
@@ -139,6 +163,7 @@ void DLX::uncover(INT i) {
         this->unhide(p);
         p = ULINK(p);
     }
+    this->covered[i] = false;
 }
 
 void DLX::unhide(INT p) {
@@ -160,13 +185,13 @@ void DLX::unhide(INT p) {
 }
 
 void DLX::commit(INT p, INT j) {
-    cout << "commit secondary column " << j << " from node " << p << endl;
+    // cout << "commit secondary column " << j << " from node " << p << endl;
     if (CLR(p) == EMPTY_COLOR) this->cover(j);
     else if (CLR(p) != IGNORE_COLOR) this->purify(p);
 }
 
 void DLX::purify(INT p) {
-    cout << "purify line of node " << p << endl;
+    // cout << "purify line of node " << p << endl;
     COLOR c = CLR(p);
     INT i = TOP(p);
     CLR(i) = c;
@@ -195,7 +220,7 @@ void DLX::unpurify(INT p) {
 }
 
 void DLX::tweak(INT x, INT p) {
-    cout << "tweak " << x << " for item " << p << endl;
+    // cout << "tweak " << x << " for item " << p << endl;
     this->hide(x);
     INT d = DLINK(x);
     DLINK(p) = d;
@@ -204,7 +229,7 @@ void DLX::tweak(INT x, INT p) {
 }
 
 void DLX::tweak_special(INT x, INT p) {
-    cout << "tweak " << x << " for item " << p << endl;
+    // cout << "tweak " << x << " for item " << p << endl;
     INT d = DLINK(x);
     DLINK(p) = d;
     ULINK(d) = p;
@@ -249,17 +274,16 @@ void DLX::untweak_special(vector<INT> &ft, INT l) {
     this->uncover(p);
 }
 
-INT DLX::choose() {
-    INT i = this->items[0].rlink;
-    // return i;
-    INT p;
+// INT DLX::choose() {
+//     INT i = this->items[0].rlink;
+//     INT p;
 
-    for (p = i; p != 0; p = this->items[p].rlink)
-        if (this->options[p].tl < this->options[i].tl)
-            i = p;
+//     for (p = i; p != 0; p = this->items[p].rlink)
+//         if (this->options[p].tl < this->options[i].tl)
+//             i = p;
 
-    return i;
-}
+//     return i;
+// }
 
 void DLX::print_table() {
     cout << this->nb_items << " items (" << this->nb_primary << " primary)" << endl;
@@ -355,7 +379,7 @@ vector<vector<INT>> DLX::all_solutions(bool verbose) {
         cout << endl;
     };
 
-    M2: cout << "M2" << endl;
+    M2: // cout << "M2" << endl;
         ppx(x, l);
         if (RLINK(0) == 0) {
             // cout << "====================================================" << endl;
@@ -368,21 +392,21 @@ vector<vector<INT>> DLX::all_solutions(bool verbose) {
             // cout << "====================================================" << endl;
             goto M9;
         }
-    M3: cout << "M3" << endl;
+    M3: // cout << "M3" << endl;
         ppx(x, l);
-        i = this->choose();
-        cout << "Choose " << i << endl;
-        cout << "Branch degree " << branch_degree(i) << endl;
-        cout << "BOUND(i) " << BOUND(i) << endl;
+        i = this->choose(this);
+        // cout << "Choose " << i << endl;
+        // cout << "Branch degree " << branch_degree(i) << endl;
+        // cout << "BOUND(i) " << BOUND(i) << endl;
         if (branch_degree(i) == 0) goto M9;
-    M4: cout << "M4" << endl;
+    M4: // cout << "M4" << endl;
         ppx(x, l);
         x[l] = DLINK(i);
         BOUND(i)--;
         if (BOUND(i) == 0) this->cover(i);
         if (BOUND(i) != 0 || SLACK(i) != 0)
             ft[l] = x[l];
-    M5: cout << "M5" << endl;
+    M5: // cout << "M5" << endl;
         ppx(x, l);
         if (BOUND(i) == 0 && SLACK(i) == 0) {
             if (x[l] != i) goto M6;
@@ -398,7 +422,7 @@ vector<vector<INT>> DLX::all_solutions(bool verbose) {
             RLINK(p) = q;
             LLINK(q) = p;
         }
-    M6: cout << "M6" << endl;
+    M6: // cout << "M6" << endl;
         ppx(x, l);
         if (x[l] != i) {
             p = x[l] + 1;
@@ -415,10 +439,10 @@ vector<vector<INT>> DLX::all_solutions(bool verbose) {
                 }
             }
         }
-        print_table();
+        // print_table();
         l++;
         goto M2;
-    M7: cout << "M7" << endl;
+    M7: // cout << "M7" << endl;
         ppx(x, l);
         // if (x[l] != i) {
         p = x[l] - 1;
@@ -438,7 +462,7 @@ vector<vector<INT>> DLX::all_solutions(bool verbose) {
         x[l] = DLINK(x[l]);
         // cout << "x_l " << x[l] << endl;
         goto M5;
-    M8: cout << "M8" << endl;
+    M8: // cout << "M8" << endl;
         ppx(x, l);
         // cout << "BOUND(i) " << BOUND(i) << endl;
         // cout << "SLACK(i) " << SLACK(i) << endl;
@@ -448,7 +472,7 @@ vector<vector<INT>> DLX::all_solutions(bool verbose) {
         else this->untweak(ft, l);
         BOUND(i)++;
         // cout << "BOUND(i) " << BOUND(i) << endl;
-    M9: cout << "M9" << endl;
+    M9: // cout << "M9" << endl;
         // cout << "M9 - l=" << l << endl;
         ppx(x, l);
         if (l == 0) {
@@ -475,7 +499,7 @@ vector<vector<INT>> DLX::all_solutions(bool verbose) {
         }
 }
 
-vector<INT> DLX::get_solution() {
+vector<INT> DLX::search(bool resume) {
     vector<INT> x(this->options.size());
     vector<INT> ft(this->options.size());
     INT l = 0;
@@ -490,6 +514,14 @@ vector<INT> DLX::get_solution() {
         cout << endl;
     };
 
+    if (resume) {
+        x  = this->x;
+        ft = this->ft;
+        l  = this->l;
+        i  = this->i;
+        goto M9;
+    }
+
     M2: // cout << "M2" << endl;
         // ppx(x, l);
         if (RLINK(0) == 0) {
@@ -498,13 +530,21 @@ vector<INT> DLX::get_solution() {
             // this->print_solution(x, l, pp);
             vector<INT> sol = this->solution_rows(x, l);
             // this->print_solution(sol);
+            
+            // Sauvegarde de l'état de la recherche
+            this->x  = x;
+            this->ft = ft;
+            this->l  = l;
+            this->i  = i;
+
             return sol;
+
             // cout << "====================================================" << endl;
             goto M9;
         }
     M3: // cout << "M3" << endl;
         // ppx(x, l);
-        i = this->choose();
+        i = this->choose(this);
         // cout << "Choose " << i << endl;
         // cout << "Branch degree " << branch_degree(i) << endl;
         // cout << "BOUND(i) " << BOUND(i) << endl;
@@ -585,7 +625,7 @@ vector<INT> DLX::get_solution() {
         // cout << "M9 - l=" << l << endl;
         // ppx(x, l);
         if (l == 0) {
-            return {};
+            throw NoSolution();
         } else l--;
         // cout << "M9 - l=" << l << endl;
         // cout << "x_l " << x[l] << endl;

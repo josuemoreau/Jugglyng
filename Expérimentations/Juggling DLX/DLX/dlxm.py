@@ -1,4 +1,4 @@
-from typing import List, Tuple, Any, Dict, Callable, Hashable, Iterator, Union, Set
+from typing import List, Tuple, Any, Dict, Callable, Hashable, Iterator, Union, Set, Optional
 from typing_extensions import Protocol
 import cppyy
 import os
@@ -19,6 +19,7 @@ _COLOR = _DLX_M.COLOR
 _DLX = _DLX_M.DLX
 _EMPTY_COLOR = 0
 _AbstrItem: Any = _DLX_M.AbstrItem
+_NoSolution = _DLX_M.NoSolution
 
 _primary_tpl = _std.make_tuple['DLX_M::AbstrItem*', _INT, _INT]
 _primary_vct = _std.vector[_std.tuple['DLX_M::AbstrItem*', _INT, _INT]]
@@ -69,6 +70,7 @@ class NewId(Protocol):
 class ConcItem(_AbstrItem):
     def set(self, repr: Any, x: Any):
         self.x = x
+        self.dlx_id = 0
         self.repr = repr
 
     def get_repr(self):
@@ -82,6 +84,12 @@ class ConcItem(_AbstrItem):
 
     def print(self):
         print(self.repr, end="", flush=True)
+
+    def get_id(self):
+        return self.dlx_id
+
+    def set_id(self, id):
+        self.dlx_id = id
 
 
 class DLXMVariable():
@@ -147,12 +155,18 @@ class DLXM():
     variables: List[DLXMVariable]
     new_id: NewId
     rows: List[Tuple[List[ConcItem], List[Tuple[ConcItem, int]]]]
+    resume: bool
+    compiled_only: bool
 
-    def __init__(self):
+    def __init__(self, choose=None):
         self.variables = []
         self.new_id = _new_id_generator()
         self.rows = []
         self.rows_cpp = []
+        self.resume = False
+        self.compiled_only = False
+        self.dlx = None
+        self.choose = choose
 
     def new_variable(self, lower_bound: int = 0, upper_bound: int = 1,
                      secondary: bool = False) -> DLXMVariable:
@@ -195,6 +209,18 @@ class DLXM():
         self.rows.append((row_primary, row_secondary))
         self.rows_cpp.append((_RP(row_primary), _RS(row_secondary)))
 
+    def primary_variables(self, lower_bound: int, upper_bound: int) -> Optional[DLXMVariable]:
+        for var in self.variables:
+            if var.lower_bound == lower_bound and var.upper_bound == upper_bound and not var.secondary:
+                return var
+        return None
+
+    def secondary_variables(self) -> Optional[DLXMVariable]:
+        for var in self.variables:
+            if var.secondary:
+                return var
+        return None
+
     def row_repr(self, i: int) -> List[Union[Any, Tuple[Any, int]]]:
         """ Renvoie la représentation de la ligne `i`.
 
@@ -222,6 +248,35 @@ class DLXM():
         """
         p, s = self.rows[i]
         return [e.get_obj() for e in p] + [(e.get_obj(), c) for (e, c) in s]
+
+    def compile(self):
+        primary_items: List[Tuple[ConcItem, int, int]] = []
+        secondary_items: List[ConcItem] = []
+
+        x: DLXMVariable
+        for x in self.variables:
+            if x.secondary:
+                for k in x:
+                    secondary_items.append(x[k])
+            else:
+                for k in x:
+                    primary_items.append((x[k], x.lower_bound, x.upper_bound))
+
+        primary = _P(primary_items)
+        secondary = _S(secondary_items)
+        rows = _R([])
+
+        dlx = _DLX(primary, secondary, rows, self.choose) \
+            if self.choose is not None else _DLX(primary, secondary, rows)
+        for p, s in self.rows_cpp:
+            dlx.add_row(p, s)
+
+        self.dlx = dlx
+        self.compiled_only = True
+
+    def set_choose_function(self, choose):
+        self.choose = choose
+        self.dlx.set_choose_function(choose)
 
     def all_solutions(self, verbose: bool = False) -> List[Set[int]]:
         """ Renvoie toutes les solutions à l'instance de exact cover avec
@@ -282,13 +337,29 @@ class DLXM():
         secondary = _S(secondary_items)
         rows = _R([])
 
-        dlx = _DLX(primary, secondary, rows)
+        dlx = _DLX(primary, secondary, rows, self.choose) \
+            if self.choose is not None else _DLX(primary, secondary, rows)
         for p, s in self.rows_cpp:
             dlx.add_row(p, s)
         sols = dlx.all_solutions(verbose)
         return [set(sol) for sol in sols]
 
-    def get_solution(self) -> Set[int]:
+    def search(self) -> Optional[Set[int]]:
+        if self.compiled_only:
+            self.compiled_only = False
+            try:
+                sol = self.dlx.search(False)
+                self.resume = True
+                return set(sol)
+            except _NoSolution:
+                return None
+        elif self.resume:
+            try:
+                sol = self.dlx.search(True)
+                return set(sol)
+            except _NoSolution:
+                return None
+
         primary_items: List[Tuple[ConcItem, int, int]] = []
         secondary_items: List[ConcItem] = []
 
@@ -305,11 +376,19 @@ class DLXM():
         secondary = _S(secondary_items)
         rows = _R([])
 
-        dlx = _DLX(primary, secondary, rows)
+        dlx = _DLX(primary, secondary, rows, self.choose) \
+            if self.choose is not None else _DLX(primary, secondary, rows)
         for p, s in self.rows_cpp:
             dlx.add_row(p, s)
-        sol = dlx.get_solution()
-        return set(sol)
+
+        try:
+            sol = dlx.search(False)
+            self.dlx = dlx
+            self.resume = True
+
+            return set(sol)
+        except _NoSolution:
+            return None
 
 
 if __name__ == "__main__":

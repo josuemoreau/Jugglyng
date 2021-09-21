@@ -2,6 +2,7 @@
 #include <unordered_map>
 #include <functional>
 #include <cmath>
+#include <stdexcept>
 
 namespace DLX_M {
 
@@ -16,6 +17,8 @@ using namespace std;
 class AbstrItem {
 public:
     virtual void print() {}
+    virtual void set_id(INT) {}
+    virtual INT get_id() { return 0; }
 };
 
 struct Item {
@@ -68,25 +71,44 @@ struct Node {
 #define BOUND(x) this->items[x].bound
 
 #define monus(x, y) max(x - y, (INT) 0)
-#define branch_degree(p) monus(LEN(p) + 1, monus(BOUND(p), SLACK(p))) 
+#define branch_degree(p) monus(LEN(p) + 1, monus(BOUND(p), SLACK(p)))
+
+class NoSolution : public std::exception {
+    public:
+        const char *what() const throw() {
+            return "No solution !";
+        }
+};
 
 class DLX {
     public:
         DLX(vector<tuple<AbstrItem*, INT, INT>> primary,
             vector<AbstrItem*> secondary, 
             vector<tuple<vector<AbstrItem*>, vector<tuple<AbstrItem*, COLOR>>>> rows);
+        DLX(vector<tuple<AbstrItem*, INT, INT>> primary,
+            vector<AbstrItem*> secondary, 
+            vector<tuple<vector<AbstrItem*>, vector<tuple<AbstrItem*, COLOR>>>> rows,
+            function<INT(DLX*)> choose);
 
         void add_row(vector<AbstrItem*> row_primary, 
                      vector<tuple<AbstrItem*, COLOR>> row_secondary);
         
         vector<vector<INT>> all_solutions(bool verbose = false);
-        vector<INT> get_solution();
+        vector<INT> search(bool resume);
+        // vector<INT> get_solution();
 
         vector<INT> solution_rows(vector<INT> x, INT l);
 
         void print_table();
         void print_rows(vector<INT> rows);
         void print_solution(vector<INT> sol);
+
+        Item item(INT i) { return this->items[i]; }
+        Node option(INT i) { return this->options[i]; }
+
+        bool is_covered(INT i) { return this->covered[i]; }
+
+        void set_choose_function(function<INT(DLX*)> choose) { this->choose = choose; }
 
     private:
         vector<Item> items;
@@ -98,6 +120,14 @@ class DLX {
         INT nb_items = 0;
         INT nb_primary = 0;
         INT nb_rows = 0;
+
+        // Variables de sauvegarde de l'état de la recherche
+        vector<INT> x;
+        vector<INT> ft;
+        INT l, i, p, j, q;
+
+        function<INT(DLX*)> choose;
+        bool *covered;
 
         void cover(INT i);
         void hide(INT i);
@@ -111,7 +141,7 @@ class DLX {
         void tweak_special(INT x, INT p);
         void untweak(vector<INT> &ft, INT l);
         void untweak_special(vector<INT> &ft, INT l);
-        INT choose();
+        // INT choose();
 };
 
 }

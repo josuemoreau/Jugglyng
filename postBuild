@@ -1,0 +1,9 @@
+#!/bin/bash
+
+mamba activate juggling
+jupyter labextension install @jupyter-widgets/jupyterlab-manager
+jupyter labextension install jp_proxy_widget
+jupyter lab build
+
+cd "Expérimentations/Juggling DLX/DLX"
+make lib
