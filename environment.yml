@@ -11,6 +11,8 @@ dependencies:
 - notebook
 - ipywidgets
 - pythreejs
+# Recompilation de jupyter lab pour installer jp_proxy_widget
+- nodejs
 # Algorithme de composition
 - numpy
 - gcc
