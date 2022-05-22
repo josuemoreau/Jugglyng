@@ -4,9 +4,10 @@ from typing import List
 
 
 class Automata():
-    def __init__(self, nb_balls: int, max_height: int):
+    def __init__(self, nb_balls: int, max_height: int, layout: str='dot'):
         self.max_height = max_height
         self.nb_balls = nb_balls
+        self.layout = layout
         self.initial = [1 if i < nb_balls else 0 for i in range(max_height)]
 
     def transition(self, state: List[int], times: List[int]):
@@ -48,18 +49,19 @@ class Automata():
 
     def draw(self):
         states, transitions = self.generate()
-        dot = Digraph(comment='Juggling Automata', graph_attr={'layout': 'dot'})
+        dot = Digraph(comment='Juggling Automata', graph_attr={'layout': self.layout})
         for s in states:
             dot.node(self.state_str(s))
         for (s1, a, s2) in transitions:
             dot.edge(self.state_str(s1), self.state_str(s2), label=str(a), constraint='true')
         dot.render('automata-output/automata-multiplex-'
                    + str(self.nb_balls) + '-'
-                   + str(self.max_height)
+                   + str(self.max_height) + '-'
+                   + self.layout
                    + '.gv', view=True)
 
 
 if __name__ == "__main__":
-    a = Automata(3, 5)
+    a = Automata(4, 5, 'sfdp')
 
     a.draw()
