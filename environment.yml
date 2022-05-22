@@ -11,6 +11,11 @@ dependencies:
 - notebook
 - ipywidgets
 - pythreejs
+# Pour lire les notebook de présentation
+- jupytext
+- rise
+# Pour utiliser les algos de génération d'automates
+- graphviz
 # Recompilation de jupyter lab pour installer jp_proxy_widget
 - nodejs
 # Algorithme de composition
